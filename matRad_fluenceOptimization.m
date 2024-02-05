@@ -1,4 +1,4 @@
-function [resultGUI,optimizer] = matRad_fluenceOptimization(dij,cst,pln,stf,wInit)
+function [resultGUI,optimizer] = matRad_fluenceOptimization(dij,cst,pln,stf,inititialDoseGridFileName, wInit)
 % matRad inverse planning wrapper function
 % 
 % call
@@ -75,6 +75,27 @@ end
 cst = matRad_resizeCstToGrid(cst,dij.ctGrid.x,dij.ctGrid.y,dij.ctGrid.z,...
                                  dij.doseGrid.x,dij.doseGrid.y,dij.doseGrid.z);
 
+% updating cst optimization version to use dosegrid
+if exist('inititialDoseGridFileName','var')
+    %load true dose
+    loaded_dose_struct = load(inititialDoseGridFileName);
+    fieldNames = fieldnames(loaded_dose_struct);
+    loaded_dose_grid = loaded_dose_struct.(fieldNames{1,1});
+    %resize to dose cube resolution
+    resized_dose_grid = matRad_interp3(dij.ctGrid.x,dij.ctGrid.y,dij.ctGrid.z, ...
+                                                 loaded_dose_grid, ...
+                                                dij.doseGrid.x,dij.doseGrid.y',dij.doseGrid.z);
+    for i = 1:size(cst,1)
+        new_param = resized_dose_grid(cst{i,4}{1});
+        cst{i,6}{1,1}.parameters = {new_param};
+        %parameterTypeArray = repmat("dose", size(new_param, 1), 1);
+        %cst{i,6}{1,1}.parameterTypes = parameterTypeArray;
+        
+    end                                      
+end
+    
+                             
+                             
 % find target indices and described dose(s) for weight vector
 % initialization
 V          = [];
@@ -133,6 +154,7 @@ end
 
 % calculate initial beam intensities wInit
 if exist('wInit','var')
+    disp('wInit exists')
     %do Nothing
 elseif  strcmp(pln.propOpt.bioOptimization,'const_RBExD') && strcmp(pln.radiationMode,'protons')
     
