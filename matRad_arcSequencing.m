@@ -114,7 +114,7 @@ for i = 1:numOfBeams
     
     if stf(i).propVMAT.DAOBeam
         beam(i).gantryRot = machine.constraints.gantryRotationSpeed(2); %gantry rotation rate until next opt angle
-        beam(i).MURate = weightToMU.*beam(i).shapesWeight.*beam(i).gantryRot./stf(i).propVMAT.DAOAngleBordersDiff; %dose rate until next opt angle
+        beam(i).MURate = weightToMU.*beam(i).shapesWeight.*beam(i).gantryRot./abs(stf(i).propVMAT.DAOAngleBordersDiff); %dose rate until next opt angle
         %Rescale weight to represent only this control point; weight will be shared
         %with the interpolared control points in matRad_daoVec2ApertureInfo
         beam(i).shapesWeight = beam(i).shapesWeight.*stf(i).propVMAT.timeFacCurr;

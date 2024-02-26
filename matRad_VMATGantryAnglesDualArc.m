@@ -1,4 +1,4 @@
-function pln = matRad_VMATGantryAngles(pln,cst,ct)
+function pln = matRad_VMATGantryAnglesDualArc(pln,cst,ct)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % matRad determine gantry angles for VMAT
 % 

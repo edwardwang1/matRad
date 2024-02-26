@@ -136,8 +136,8 @@ else
     timeFacMatrix = sparse(i,j,timeFac,(apertureInfo.totalNumOfShapes-1),apertureInfo.totalNumOfShapes);
     timeBNOptAngles = timeFacMatrix*timeDAOBorderAngles;
     
-    leftLeafSpeed = abs(diff(reshape(leftLeafPos,apertureInfo.beam(1).numOfActiveLeafPairs,[]),1,2))./repmat(timeBNOptAngles',apertureInfo.beam(1).numOfActiveLeafPairs,1);
-    rightLeafSpeed = abs(diff(reshape(rightLeafPos,apertureInfo.beam(1).numOfActiveLeafPairs,[]),1,2))./repmat(timeBNOptAngles',apertureInfo.beam(1).numOfActiveLeafPairs,1);
+    leftLeafSpeed = abs(diff(reshape(leftLeafPos,apertureInfo.beam(1).numOfActiveLeafPairs,[]),1,2)./repmat(timeBNOptAngles',apertureInfo.beam(1).numOfActiveLeafPairs,1));  %wrapped entire ratio in abs
+    rightLeafSpeed = abs(diff(reshape(rightLeafPos,apertureInfo.beam(1).numOfActiveLeafPairs,[]),1,2)./repmat(timeBNOptAngles',apertureInfo.beam(1).numOfActiveLeafPairs,1));%wrapped entire ratio in abs
     
     % values of max leaf speeds
     leftMaxLeafSpeed = max(leftLeafSpeed,[],1);

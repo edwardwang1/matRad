@@ -102,7 +102,7 @@ if apertureInfo.runVMAT
     optInd = [apertureInfo.propVMAT.beam.DAOBeam];
     optAngleLengths = [apertureInfo.propVMAT.beam(optInd).DAOAngleBordersDiff];
     optGantryRot = [apertureInfo.beam(optInd).gantryRot];
-    apertureInfoVec((offset+1):end) = optAngleLengths./optGantryRot; %entries are the times until the next opt gantry angle is reached
+    apertureInfoVec((offset+1):end) = abs(optAngleLengths./optGantryRot); %entries are the times until the next opt gantry angle is reached
     
 end
 

@@ -58,7 +58,7 @@ pln.propOpt.VMAToptions.maxDAOGantryAngleSpacing = 4;      % Max gantry angle sp
 pln.propOpt.VMAToptions.maxFMOGantryAngleSpacing = 28;     % Max gantry angle spacing for FMO
 
 pln.propOpt.VMAToptions.startingAngle = 0;
-pln.propOpt.VMAToptions.finishingAngle = 359;
+pln.propOpt.VMAToptions.finishingAngle = 180;
 pln.propOpt.VMAToptions.continuousAperture = 0;
 
 pln.propDoseCalc.doseGrid.resolution.x = 5; % [mm]
@@ -113,7 +113,8 @@ matRadGUI;
 % aperture shapes. The fluence map at each angle in the initGantryAngles
 % set is sequenced, with the resulting apertures spread to neighbouring
 % angles from the optGantryAngles set.
-resultGUI = matRad_siochiLeafSequencing(resultGUI,stf,dij,pln,0);
+%resultGUI = matRad_siochiLeafSequencing(resultGUI,stf,dij,pln,0);
+resultGUI = matRad_siochiLeafSequencingDualArc(resultGUI,stf,dij,pln,0);
 
 %% DAO - Direct Aperture Optimization
 % The Direct Aperture Optimization is an optimization approach where we 
