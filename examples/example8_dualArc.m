@@ -35,11 +35,6 @@ load('HEAD_AND_NECK.mat');
 % structure requires input from the treatment planner and defines 
 % the most important cornerstones of your treatment plan.
 
-
-matRad_rc
-
-load('HEAD_AND_NECK.mat');
-
 pln.radiationMode   = 'photons';   % either photons / protons / carbon
 pln.machine         = 'Generic';
 
@@ -62,8 +57,8 @@ pln.propOpt.VMAToptions.maxGantryAngleSpacing    = 4;      % Max gantry angle sp
 pln.propOpt.VMAToptions.maxDAOGantryAngleSpacing = 4;      % Max gantry angle spacing for DAO
 pln.propOpt.VMAToptions.maxFMOGantryAngleSpacing = 28;     % Max gantry angle spacing for FMO
 
-pln.propOpt.VMAToptions.startingAngle = 0; %
-pln.propOpt.VMAToptions.finishingAngle = 84; %180
+pln.propOpt.VMAToptions.startingAngle = 0; 
+pln.propOpt.VMAToptions.finishingAngle = 360; 
 pln.propOpt.VMAToptions.continuousAperture = 0;
 
 pln.propDoseCalc.doseGrid.resolution.x = 30; % [mm] 5
@@ -75,8 +70,9 @@ pln2 = pln;
 pln2.propOpt.VMAToptions.maxGantryAngleSpacing    = -4;      % Max gantry angle spacing for dose calculation
 pln2.propOpt.VMAToptions.maxDAOGantryAngleSpacing = -4;      % Max gantry angle spacing for DAO
 pln2.propOpt.VMAToptions.maxFMOGantryAngleSpacing = -28;     % Max gantry angle spacing for FMO
-pln2.propOpt.VMAToptions.startingAngle = 84;
+pln2.propOpt.VMAToptions.startingAngle = 360;
 pln2.propOpt.VMAToptions.finishingAngle = 0; 
+
 
 %%
 % Generate dose calculation, DAO, and FMO angles from the parameters input
@@ -98,14 +94,20 @@ pln2 = matRad_VMATGantryAngles(pln2, cst, ct);
 stf = matRad_generateStf(ct,cst,pln);
 stf2 = matRad_generateStf(ct,cst,pln2);
 
+epsilon = 1e-6;
+%stf(numel(stf)).propVMAT.timeFac = stf(2).propVMAT.timeFac; #1, 0 -> 0.9999, 0...1
+stf(numel(stf)).propVMAT.timeFac = [1-epsilon, epsilon];
+stf2(1).propVMAT.timeFac = [epsilon, 1-epsilon];
+
 %% Dose Calculation
 % Lets generate dosimetric information by pre-computing dose influence 
 % matrices for unit beamlet intensities. Having dose influences available 
 % allows for subsequent inverse optimization.
 dij = matRad_calcPhotonDose(ct,stf,pln,cst);
 
+%dij2 = matRad_calcPhotonDose(ct,stf2,pln2,cst);
 
-%% Make a copy of dij for the reverse arc
+%% Make a copy of dij for the reverse arc if not calculating
 dij2 = dij;
 
 tempPhysicalDose = dij.physicalDose(1,1); 
@@ -128,24 +130,32 @@ dij2.physicalDose(1,1) = {tempPhysicalDose};
 % visualize the optimized dose cubes.
 %resultGUI = matRad_fluenceOptimization(dij,cst,pln,stf, [], 'example8TrueOptim.mat');
 resultGUI = matRad_fluenceOptimization(dij,cst,pln,stf);
+resultGUI2 = matRad_fluenceOptimization(dij2,cst,pln2,stf2); %can be skipped
 
-%% Make a copy of resultGUI for reverse arc
-resultGUI2 = resultGUI;
-new_w = zeros(size(resultGUI2.w));
-new_wUnsequenced = zeros(size(resultGUI2.wUnsequenced));
+%% Make a copy of resultGUI for reverse arc if not calculating
 
-for i = 1:dij.numOfBeams
-    correspondingBeam = dij.numOfBeams + 1 - i;
-    resultGUI2.(['physicalDose_beam' num2str(i)]) = resultGUI.(['physicalDose_beam' num2str(correspondingBeam)]);
-    new_w((i-1) * dij.numOfRaysPerBeam(i) + 1 : i * dij.numOfRaysPerBeam(i)) = resultGUI2.w((correspondingBeam-1) * dij.numOfRaysPerBeam(correspondingBeam) + 1 : correspondingBeam * dij.numOfRaysPerBeam(correspondingBeam));
-    new_wUnsequenced((i-1) * dij.numOfRaysPerBeam(i) + 1 : i * dij.numOfRaysPerBeam(i)) = resultGUI2.wUnsequenced((correspondingBeam-1) * dij.numOfRaysPerBeam(correspondingBeam) + 1 : correspondingBeam * dij.numOfRaysPerBeam(correspondingBeam));
-end
+% resultGUI2 = resultGUI;
+% new_w = zeros(size(resultGUI2.w));
+% new_wUnsequenced = zeros(size(resultGUI2.wUnsequenced));
+% 
+% for i = 1:dij.numOfBeams
+%     correspondingBeam = dij.numOfBeams + 1 - i;
+%     resultGUI2.(['physicalDose_beam' num2str(i)]) = resultGUI.(['physicalDose_beam' num2str(correspondingBeam)]);
+%     new_w((i-1) * dij.numOfRaysPerBeam(i) + 1 : i * dij.numOfRaysPerBeam(i)) = resultGUI2.w((correspondingBeam-1) * dij.numOfRaysPerBeam(correspondingBeam) + 1 : correspondingBeam * dij.numOfRaysPerBeam(correspondingBeam));
+%     new_wUnsequenced((i-1) * dij.numOfRaysPerBeam(i) + 1 : i * dij.numOfRaysPerBeam(i)) = resultGUI2.wUnsequenced((correspondingBeam-1) * dij.numOfRaysPerBeam(correspondingBeam) + 1 : correspondingBeam * dij.numOfRaysPerBeam(correspondingBeam));
+% end
 
-
-resultGUI2 = matRad_siochiLeafSequencing(resultGUI2,stf2,dij2,pln2,0);
-
-%resultGUI2 = matRad_fluenceOptimization(dij2,cst,pln2,stf2); %can be skipped
 %matRadGUI;
+
+%%
+
+resultGUI.w = resultGUI.w/2;
+resultGUI2.w = resultGUI2.w/2;
+
+resultGUI.wUnsequenced = resultGUI.wUnsequenced/2;
+resultGUI2.wUnsequenced = resultGUI2.wUnsequenced/2;
+
+
 
 %% Sequencing
 % This is a multileaf collimator leaf sequencing algorithm that is used in 
@@ -156,36 +166,35 @@ resultGUI2 = matRad_siochiLeafSequencing(resultGUI2,stf2,dij2,pln2,0);
 % angles from the optGantryAngles set.
 resultGUI = matRad_siochiLeafSequencing(resultGUI,stf,dij,pln,0);
 
+
+
 %% MLC sequence second 
 
 resultGUI2 = matRad_siochiLeafSequencing(resultGUI2,stf2,dij2,pln2,0);
-%% 
 
-a = resultGUI.apertureInfo.apertureVector;
-b = resultGUI2.apertureInfo.apertureVector;
-
-c = a-b;
-plot(c);
+%%
+test = resultGUI;
+test2 = resultGUI2;
 
 %% Combine resultGUIs from both sequencing steps
 
-resultGUI3.physicalDose = resultGUI.physicalDose + resultGUI2.physicalDose;
+resultGUI3.physicalDose = test.physicalDose + test2.physicalDose;
 for i = 1:dij.numOfBeams
-    resultGUI3.(['physicalDose_beam' num2str(i)]) = resultGUI.(['physicalDose_beam' num2str(i)]);
-    resultGUI3.(['physicalDose_beam' num2str(i + dij.numOfBeams)]) = resultGUI2.(['physicalDose_beam' num2str(i)]); 
+    resultGUI3.(['physicalDose_beam' num2str(i)]) = test.(['physicalDose_beam' num2str(i)]);
+    resultGUI3.(['physicalDose_beam' num2str(i + dij.numOfBeams)]) = test2.(['physicalDose_beam' num2str(i)]); 
 end
-resultGUI3.w = [resultGUI.w;resultGUI.w];
-resultGUI3.wUnsequenced = [resultGUI.wUnsequenced;resultGUI.wUnsequenced];
-resultGUI3.wSequenced = [resultGUI.wSequenced;resultGUI.wSequenced];
+resultGUI3.w = [test.w;test2.w];
+resultGUI3.wUnsequenced = [test.wUnsequenced;test2.wUnsequenced];
+resultGUI3.wSequenced = [test.wSequenced;test2.wSequenced];
 
 %Create new ApertureInfo
-newApertureInfo = resultGUI.apertureInfo;
+newApertureInfo = test.apertureInfo;
 
 % Create new propVMAT and update
-newPropVMAT = resultGUI.apertureInfo.propVMAT;
-newPropVMATBeam = resultGUI.apertureInfo.propVMAT.beam;
+newPropVMAT = test.apertureInfo.propVMAT;
+newPropVMATBeam = test.apertureInfo.propVMAT.beam;
 for i = 1:dij.numOfBeams
-    newPropVMATBeam(i+dij.numOfBeams) = resultGUI2.apertureInfo.propVMAT.beam(i);
+    newPropVMATBeam(i+dij.numOfBeams) = test2.apertureInfo.propVMAT.beam(i);
 end
 for i=1+dij.numOfBeams:2*dij.numOfBeams
     newPropVMATBeam(i).lastDAOIndex = newPropVMATBeam(i).lastDAOIndex + dij.numOfBeams;
@@ -197,59 +206,74 @@ newPropVMAT.jacobT = eye(2 * dij.numOfBeams);
 newApertureInfo.propVMAT = newPropVMAT;
 
 %Update other variables
-newApertureInfo.jacobiScale = [resultGUI.apertureInfo.jacobiScale;resultGUI2.apertureInfo.jacobiScale];
-newApertureInfo.totalNumOfBixels = resultGUI.apertureInfo.totalNumOfBixels + resultGUI2.apertureInfo.totalNumOfBixels;
-newApertureInfo.totalNumOfShapes = resultGUI.apertureInfo.totalNumOfShapes + resultGUI2.apertureInfo.totalNumOfShapes;
-newApertureInfo.totalNumOfOptBixels = resultGUI.apertureInfo.totalNumOfOptBixels + resultGUI2.apertureInfo.totalNumOfOptBixels;
-newApertureInfo.doseTotalNumOfLeafPairs = resultGUI.apertureInfo.doseTotalNumOfLeafPairs + resultGUI2.apertureInfo.doseTotalNumOfLeafPairs;
-newApertureInfo.totalNumOfLeafPairs = resultGUI.apertureInfo.totalNumOfLeafPairs + resultGUI2.apertureInfo.totalNumOfLeafPairs;
-newApertureInfo.bixelWeights = [resultGUI.apertureInfo.bixelWeights; resultGUI2.apertureInfo.bixelWeights];
-newApertureInfo.bixelJApVec = [resultGUI.apertureInfo.bixelJApVec resultGUI2.apertureInfo.bixelJApVec];
+newApertureInfo.jacobiScale = [test.apertureInfo.jacobiScale;test2.apertureInfo.jacobiScale];
+newApertureInfo.totalNumOfBixels = test.apertureInfo.totalNumOfBixels + test2.apertureInfo.totalNumOfBixels;
+newApertureInfo.totalNumOfShapes = test.apertureInfo.totalNumOfShapes + test2.apertureInfo.totalNumOfShapes;
+newApertureInfo.totalNumOfOptBixels = test.apertureInfo.totalNumOfOptBixels + test2.apertureInfo.totalNumOfOptBixels;
+newApertureInfo.doseTotalNumOfLeafPairs = test.apertureInfo.doseTotalNumOfLeafPairs + test2.apertureInfo.doseTotalNumOfLeafPairs;
+newApertureInfo.totalNumOfLeafPairs = test.apertureInfo.totalNumOfLeafPairs + test2.apertureInfo.totalNumOfLeafPairs;
+newApertureInfo.bixelWeights = [test.apertureInfo.bixelWeights; test2.apertureInfo.bixelWeights];
+newApertureInfo.bixelJApVec = [test.apertureInfo.bixelJApVec test2.apertureInfo.bixelJApVec];
 
 
-%newApertureInfo.apertureVector = [resultGUI.apertureInfo.apertureVector; resultGUI2.apertureInfo.apertureVector];
-%newApertureInfo.mappingMx = [resultGUI.apertureInfo.mappingMx; resultGUI2.apertureInfo.mappingMx];
-%newApertureInfo.limMx = [resultGUI.apertureInfo.limMx; resultGUI2.apertureInfo.limMx];
+% newApertureInfo.apertureVector = [test.apertureInfo.apertureVector; test2.apertureInfo.apertureVector];
+% newApertureInfo.mappingMx = [test.apertureInfo.mappingMx; test2.apertureInfo.mappingMx];
+% newApertureInfo.limMx = [test.apertureInfo.limMx; test2.apertureInfo.limMx];
 
 
 
 %Special modification for apertrueVector, mappingMx, limMx
-newApertureInfo.apertureVector = [resultGUI.apertureInfo.apertureVector(1:dij.numOfBeams, :); ...
-    resultGUI2.apertureInfo.apertureVector(1:dij.numOfBeams, :); ...
-    resultGUI.apertureInfo.apertureVector(dij.numOfBeams+1:numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
-    resultGUI2.apertureInfo.apertureVector(dij.numOfBeams+1:numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
-    resultGUI.apertureInfo.apertureVector(numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :); ...
-    resultGUI2.apertureInfo.apertureVector(numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :)];
+newApertureInfo.apertureVector = [test.apertureInfo.apertureVector(1:dij.numOfBeams, :); ...
+    test2.apertureInfo.apertureVector(1:dij.numOfBeams, :); ...
+    test.apertureInfo.apertureVector(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams - resultGUI.apertureInfo.totalNumOfLeafPairs, :); ...
+    test2.apertureInfo.apertureVector(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs, :); ...
+    test.apertureInfo.apertureVector(1+numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
+    test2.apertureInfo.apertureVector(1+numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
+    test.apertureInfo.apertureVector(numel(test.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :); ...
+    test2.apertureInfo.apertureVector(numel(test.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :)];
 
-newApertureInfo.limMx = [resultGUI.apertureInfo.limMx(1:dij.numOfBeams, :); ...
-    resultGUI2.apertureInfo.limMx(1:dij.numOfBeams, :); ...
-    resultGUI.apertureInfo.limMx(dij.numOfBeams+1:numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
-    resultGUI2.apertureInfo.limMx(dij.numOfBeams+1:numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
-    resultGUI.apertureInfo.limMx(numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :); ...
-    resultGUI2.apertureInfo.limMx(numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :)];
+newApertureInfo.limMx = [test.apertureInfo.limMx(1:dij.numOfBeams, :); ...
+    test2.apertureInfo.limMx(1:dij.numOfBeams, :); ...
+    test.apertureInfo.limMx(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams - resultGUI.apertureInfo.totalNumOfLeafPairs, :); ...
+    test2.apertureInfo.limMx(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs, :); ...
+    test.apertureInfo.limMx(1+numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
+    test2.apertureInfo.limMx(1+numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
+    test.apertureInfo.limMx(numel(test.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :); ...
+    test2.apertureInfo.limMx(numel(test.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :)];
 
 
-tempMappingMx = resultGUI2.apertureInfo.mappingMx;
+tempMappingMx = test2.apertureInfo.mappingMx;
 tempMappingMx(:, 1) = tempMappingMx(:, 1) + dij.numOfBeams;
-tempMappingMx(dij.numOfBeams+1:numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams, 2) = tempMappingMx(dij.numOfBeams+1:numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams, 2) + dij.numOfBeams;
+tempMappingMx(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, 2) = tempMappingMx(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, 2) + dij.numOfBeams;
 
-newApertureInfo.mappingMx = [resultGUI.apertureInfo.mappingMx(1:dij.numOfBeams, :); ...
-    tempMappingMx(1:dij.numOfBeams, :); ...
-    resultGUI.apertureInfo.mappingMx(dij.numOfBeams+1:numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
-    tempMappingMx(dij.numOfBeams+1:numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
-    resultGUI.apertureInfo.mappingMx(numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :); ...
-    tempMappingMx(numel(resultGUI.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :)];
+% 
+% newApertureInfo.mappingMx = [test.apertureInfo.mappingMx(1:dij.numOfBeams, :); ...
+%     tempMappingMx(1:dij.numOfBeams, :); ...
+%     test.apertureInfo.mappingMx(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams - resultGUI.apertureInfo.totalNumOfLeafPairs, :); ...
+%     test2.apertureInfo.mappingMx(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs, :) +mxAdj; ...
+%     test.apertureInfo.mappingMx(1+numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, :); ...
+%     test2.apertureInfo.mappingMx(1+numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, :) +mxAdj; ...
+%     test.apertureInfo.mappingMx(numel(test.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :); ...
+%     tempMappingMx(numel(test.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :)];
 
+mxAdj = repmat([46 46 0 0],length(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs),1);
+ a = test.apertureInfo.mappingMx(1:dij.numOfBeams, :);
+ b = tempMappingMx(1:dij.numOfBeams, :);
+ c = test.apertureInfo.mappingMx(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams - resultGUI.apertureInfo.totalNumOfLeafPairs, :);
+ d = test2.apertureInfo.mappingMx(dij.numOfBeams+1:numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs, :) +mxAdj;
+ e = test.apertureInfo.mappingMx(1+numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, :);
+ f = test2.apertureInfo.mappingMx(1+numel(test.apertureInfo.apertureVector) - dij.numOfBeams  - resultGUI.apertureInfo.totalNumOfLeafPairs:numel(test.apertureInfo.apertureVector) - dij.numOfBeams, :) +mxAdj;
+ g = test.apertureInfo.mappingMx(numel(test.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :);
+ h = tempMappingMx(numel(test.apertureInfo.apertureVector) - dij.numOfBeams + 1:end, :);
 
-%newApertureInfo.apertureVector = [resultGUI.apertureInfo.apertureVector; resultGUI2.apertureInfo.apertureVector(dij.numOfBeams+1:end, :)];
-%newApertureInfo.mappingMx = [resultGUI.apertureInfo.mappingMx; resultGUI2.apertureInfo.mappingMx(dij.numOfBeams+1:end, :)];
-%newApertureInfo.limMx = [resultGUI.apertureInfo.limMx; resultGUI2.apertureInfo.limMx(dij.numOfBeams+1:end, :)];
+ newApertureInfo.mappingMx = [a;b;c;d;e;f;g;h];
+
 
 
 %Create new Beam and update
-newBeam = resultGUI.apertureInfo.beam;
+newBeam = test.apertureInfo.beam;
 for i = 1:dij.numOfBeams
-    newBeam(i+dij.numOfBeams) = resultGUI2.apertureInfo.beam(i);
+    newBeam(i+dij.numOfBeams) = test2.apertureInfo.beam(i);
 end
 for i=1+dij.numOfBeams:2*dij.numOfBeams
     newBeam(i).bixOffset = (i-1) * newBeam(i).numOfActiveLeafPairs + 1;
@@ -257,7 +281,19 @@ end
 newApertureInfo.beam = newBeam;
 
 resultGUI3.apertureInfo = newApertureInfo;
-resultGUI3.apertureInfo = rmfield(resultGUI3.apertureInfo, 'mappingMx');
+%resultGUI3.apertureInfo = rmfield(resultGUI3.apertureInfo, 'mappingMx');
+
+
+% Update plan object
+pln3 = pln;
+newPlnPropStf = pln.propStf;
+newPlnPropStf.gantryAngles = [pln.propStf.gantryAngles pln2.propStf.gantryAngles];
+newPlnPropStf.DAOGantryAngles = [pln.propStf.DAOGantryAngles pln2.propStf.DAOGantryAngles];
+newPlnPropStf.FMOGantryAngles = [pln.propStf.FMOGantryAngles pln2.propStf.FMOGantryAngles];
+newPlnPropStf.numOfBeams = pln.propStf.numOfBeams + pln2.propStf.numOfBeams;
+newPlnPropStf.couchAngles = [pln.propStf.couchAngles pln2.propStf.couchAngles];
+
+pln3.propStf = newPlnPropStf;
 
 
 %% DAO - Direct Aperture Optimization
@@ -265,7 +301,7 @@ resultGUI3.apertureInfo = rmfield(resultGUI3.apertureInfo, 'mappingMx');
 % directly optimize aperture shapes and weights at the angles in the
 % optGantryAngles set.  The gantry angle speed, leaf speed, and MU rate are
 % constrained by the min and max values specified by the user.
-resultGUItemp = matRad_directApertureOptimization(dij,cst,resultGUI.apertureInfo,resultGUI,pln);
+resultGUI = matRad_directApertureOptimization(dij,cst,resultGUI.apertureInfo,resultGUI,pln);
 
 %% Calculate DAO 2
 resultGUI2 = matRad_directApertureOptimization(dij2,cst,resultGUI2.apertureInfo,resultGUI2,pln2);
@@ -283,16 +319,13 @@ dij3.physicalDose = {[dij.physicalDose{1} dij2.physicalDose{1}]};
 
 %% Calculate DAO3
 
-
-%resultGUI3.apertureInfo = rmfield(resultGUI3.apertureInfo, 'limMx');
-
-resultGUI3 = matRad_directApertureOptimization(dij3,cst,resultGUI3.apertureInfo,resultGUI3,pln);
+resultGUI3 = matRad_directApertureOptimization(dij3,cst,resultGUI3.apertureInfo,resultGUI3,pln3);
 
 %% Aperture visualization
 % Use a matrad function to visualize the resulting aperture shapes
 matRad_visApertureInfo(resultGUI.apertureInfo);
 
 %% Indicator Calculation and display of DVH and QI
-[dvh,qi] = matRad_indicatorWrapper(cst,pln,resultGUI);
-matRad_showDVH(dvh,cst,pln);
+[dvh,qi] = matRad_indicatorWrapper(cst,pln3,resultGUI);
+matRad_showDVH(dvh,cst,pln3);
 

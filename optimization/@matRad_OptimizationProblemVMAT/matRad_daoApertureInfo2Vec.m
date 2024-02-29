@@ -43,6 +43,7 @@ function [apertureInfoVec, mappingMx, limMx] = matRad_daoApertureInfo2Vec(apertu
 
 vecLength = (apertureInfo.totalNumOfShapes+apertureInfo.totalNumOfLeafPairs*2);
 
+% OptimizationProblemVMAT version check
 if apertureInfo.runVMAT
     vecLength = vecLength+apertureInfo.totalNumOfShapes; %Extra set of (apertureInfo.totalNumOfShapes) number of elements, allowing arc sector times to be optimized
 end
