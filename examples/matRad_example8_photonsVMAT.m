@@ -53,11 +53,11 @@ pln.propOpt.numLevels       = 7;
  
 pln.propOpt.VMAToptions.machineConstraintFile = [pln.radiationMode '_' pln.machine];
 
-pln.propOpt.VMAToptions.maxGantryAngleSpacing    = -2;      % Max gantry angle spacing for dose calculation
+pln.propOpt.VMAToptions.maxGantryAngleSpacing    = -4;      % Max gantry angle spacing for dose calculation
 pln.propOpt.VMAToptions.maxDAOGantryAngleSpacing = -4;      % Max gantry angle spacing for DAO
 pln.propOpt.VMAToptions.maxFMOGantryAngleSpacing = -28;     % Max gantry angle spacing for FMO
 
-pln.propOpt.VMAToptions.startingAngle = 84;
+pln.propOpt.VMAToptions.startingAngle = 180;
 pln.propOpt.VMAToptions.finishingAngle = 0;
 pln.propOpt.VMAToptions.continuousAperture = 0;
 
@@ -96,7 +96,7 @@ dij = matRad_calcPhotonDose(ct,stf,pln,cst);
 % initGantryAngles set. Once the optimization has finished, trigger once the GUI to
 % visualize the optimized dose cubes.
 resultGUI = matRad_fluenceOptimization(dij,cst,pln,stf);
-matRadGUI;
+%matRadGUI;
 
 %% Sequencing
 % This is a multileaf collimator leaf sequencing algorithm that is used in 

@@ -309,7 +309,7 @@ classdef matRad_OptimizerIPOPT < matRad_Optimizer
             drawnow;
             
             % ensure to bring optimization window to front
-            figure(hFig);
+            %figure(hFig); %WHY???
         end
         
         function abortCallbackKey(obj,~,KeyEvent)

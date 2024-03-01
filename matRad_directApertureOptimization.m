@@ -94,8 +94,6 @@ if pln.propOpt.preconditioner
     apertureInfo.weightToMU = apertureInfo.weightToMU*dij.scaleFactor;
     apertureInfo.apertureVector(1:apertureInfo.totalNumOfShapes) = apertureInfo.apertureVector(1:apertureInfo.totalNumOfShapes)/dij.scaleFactor;
 end                             
-                             
-% update aperture info vector
 
 
 
