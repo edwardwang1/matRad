@@ -88,9 +88,6 @@ if exist('inititialDoseGridFileName','var')
     for i = 1:size(cst,1)
         new_param = resized_dose_grid(cst{i,4}{1});
         cst{i,6}{1,1}.parameters = {new_param};
-        %parameterTypeArray = repmat("dose", size(new_param, 1), 1);
-        %cst{i,6}{1,1}.parameterTypes = parameterTypeArray;
-        
     end                                      
 end
     
