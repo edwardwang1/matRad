@@ -32,8 +32,8 @@ pln.propOpt.VMAToptions.maxGantryAngleSpacing    = 4;      % Max gantry angle sp
 pln.propOpt.VMAToptions.maxDAOGantryAngleSpacing = 4;      % Max gantry angle spacing for DAO
 pln.propOpt.VMAToptions.maxFMOGantryAngleSpacing = 28;     % Max gantry angle spacing for FMO
 
-pln.propOpt.VMAToptions.startingAngle = 0; 
-pln.propOpt.VMAToptions.finishingAngle = 180; 
+pln.propOpt.VMAToptions.startingAngle = 30; 
+pln.propOpt.VMAToptions.finishingAngle = 182; 
 pln.propOpt.VMAToptions.continuousAperture = 0;
 
 pln.propDoseCalc.doseGrid.resolution.x = 5; % [mm] 5
@@ -45,23 +45,43 @@ pln2 = pln;
 pln2.propOpt.VMAToptions.maxGantryAngleSpacing    = -4;      % Max gantry angle spacing for dose calculation
 pln2.propOpt.VMAToptions.maxDAOGantryAngleSpacing = -4;      % Max gantry angle spacing for DAO
 pln2.propOpt.VMAToptions.maxFMOGantryAngleSpacing = -28;     % Max gantry angle spacing for FMO
-pln2.propOpt.VMAToptions.startingAngle = 180;
-pln2.propOpt.VMAToptions.finishingAngle = 0; 
+pln2.propOpt.VMAToptions.startingAngle = 182;
+pln2.propOpt.VMAToptions.finishingAngle = 30; 
 
 
 %% Setting Up CST
 
-defaultConstraint.className = 'DoseObjectives.matRad_SquaredDeviation';
-defaultConstraint.paramters = {30};
-defaultConstraint.penalty = 800;
+%defaultConstraint.className = 'DoseObjectives.matRad_SquaredDeviation';
+%defaultConstraint.className = 'DoseObjectives.matRad_SquaredOverdosing';
+
+%defaultConstraint.paramters = {30};
+defaultConstraint.penalty = 150;
+
+constraints = [-1,8.5,26,12,5,26,26,26,26,-1,-1,3,-1,7,20,-1,-1];
 
 %Change cst optim from SquaredOverdosing to SquaredDeviation
 for i = 1:size(cst,1)
+
+    if i >= 6 && i <= 9
+        defaultConstraint.className = 'DoseObjectives.matRad_SquaredUnderdosing';
+    else
+        defaultConstraint.className = 'DoseConstraints.matRad_MinMaxMeanDose';
+    end
+
     % if ~isempty(cst{i,6})
     %     cst{i,6}{1,1}.className = 'DoseObjectives.matRad_SquaredDeviation';
     % end
-    cst(i, 6) = {defaultConstraint};
+    defaultConstraint.parameters = {constraints(i)};
+    cst{i, 6} = {defaultConstraint};
+    %cst{i,3} = 'OAR';
+    
+
+    if constraints(i) == -1
+        cst{i,6} = [];
+    end
 end
+
+%cst{8, 3} = 'TARGET';
 %%
 % Generate dose calculation, DAO, and FMO angles from the parameters input
 % above. FMO is performed only on the initGantryAngles set. In the DAO
@@ -103,8 +123,8 @@ dij2 = matRad_calcPhotonDose(ct,stf2,pln2,cst);
 % treatment. In VMAT, FMO is done only at the angles in the
 % initGantryAngles set. Once the optimization has finished, trigger once the GUI to
 % visualize the optimized dose cubes.
-resultGUI = matRad_fluenceOptimization(dij,cst,pln,stf, 'LP054_OriginalDose.mat');
-resultGUI2 = matRad_fluenceOptimization(dij2,cst,pln2,stf2, 'LP054_OriginalDose.mat'); %can be skipped
+resultGUI = matRad_fluenceOptimization(dij,cst,pln,stf);
+resultGUI2 = matRad_fluenceOptimization(dij2,cst,pln2,stf2); %can be skipped
 
 
 %% Sequencing
@@ -243,12 +263,18 @@ dij3.physicalDose = {[dij.physicalDose{1} dij2.physicalDose{1}]};
 
 %% Calculate DAO3
 
-resultGUI3 = matRad_directApertureOptimization(dij3,cst,resultGUI3.apertureInfo,resultGUI3,pln3);
+resultGUI3 = matRad_directApertureOptimization(dij3,cst,resultGUI3.apertureInfo,resultGUI3,pln3, 'LP054NonFFF.mat');
 
 %% open GUI
 resultGUI1 = resultGUI;
 resultGUI = resultGUI3;
 matRadGUI
+
+%%
+y = load('LP054NonFFF.mat');
+dose_org = y.nonFFF;
+dose_opti = resultGUI.physicalDose;
+dose_diff = abs(dose_org = dose_opti);
 
 %% Aperture visualization
 % Use a matrad function to visualize the resulting aperture shapes

@@ -36,7 +36,7 @@ load('HEAD_AND_NECK.mat');
 % the most important cornerstones of your treatment plan.
 
 pln.radiationMode   = 'photons';   % either photons / protons / carbon
-pln.machine         = 'Generic';
+pln.machine         = 'Generic';   % either Generic or truebeam
 
 pln.numOfFractions  = 30;
 
@@ -61,9 +61,9 @@ pln.propOpt.VMAToptions.startingAngle = 0;
 pln.propOpt.VMAToptions.finishingAngle = 180; 
 pln.propOpt.VMAToptions.continuousAperture = 0;
 
-pln.propDoseCalc.doseGrid.resolution.x = 5; % [mm] 5
-pln.propDoseCalc.doseGrid.resolution.y = 5; % [mm] 5
-pln.propDoseCalc.doseGrid.resolution.z = 5; % [mm] 5
+pln.propDoseCalc.doseGrid.resolution.x = 30; % [mm] 5
+pln.propDoseCalc.doseGrid.resolution.y = 30; % [mm] 5
+pln.propDoseCalc.doseGrid.resolution.z = 30; % [mm] 5
 
 %
 pln2 = pln;
@@ -105,7 +105,7 @@ stf2(1).propVMAT.timeFac = stf2(2).propVMAT.timeFac;
 % matrices for unit beamlet intensities. Having dose influences available 
 % allows for subsequent inverse optimization.
 dij = matRad_calcPhotonDose(ct,stf,pln,cst);
-dij2 = matRad_calcPhotonDose(ct,stf2,pln2,cst);
+%dij2 = matRad_calcPhotonDose(ct,stf2,pln2,cst);
 
 %% Make a copy of dij for the reverse arc if not calculating
 % dij2 = dij;
