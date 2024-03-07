@@ -2,7 +2,6 @@
 % Let's begin with a clear Matlab environment and import the head &
 % neck patient into your workspace.
 matRad_rc
-
 load('LP054.mat');
 
 %% Treatment Plan
@@ -32,8 +31,8 @@ pln.propOpt.VMAToptions.maxGantryAngleSpacing    = 4;      % Max gantry angle sp
 pln.propOpt.VMAToptions.maxDAOGantryAngleSpacing = 4;      % Max gantry angle spacing for DAO
 pln.propOpt.VMAToptions.maxFMOGantryAngleSpacing = 28;     % Max gantry angle spacing for FMO
 
-pln.propOpt.VMAToptions.startingAngle = 30; 
-pln.propOpt.VMAToptions.finishingAngle = 182; 
+pln.propOpt.VMAToptions.startingAngle = 0; 
+pln.propOpt.VMAToptions.finishingAngle = 359; 
 pln.propOpt.VMAToptions.continuousAperture = 0;
 
 pln.propDoseCalc.doseGrid.resolution.x = 5; % [mm] 5
@@ -48,40 +47,68 @@ pln2.propOpt.VMAToptions.maxFMOGantryAngleSpacing = -28;     % Max gantry angle 
 pln2.propOpt.VMAToptions.startingAngle = 182;
 pln2.propOpt.VMAToptions.finishingAngle = 30; 
 
+%% Setting up CST SABR_SYNC
 
+s.VOIs = {'Esophagus', 'Heart', 'Chestwall', 'GreatVes', 'SpinalCanal', 'Trachea', 'Lung_Eval'...
+    'PTV_a', 'PTV_b'};
+s.Parameters = {35, 38, 57, 53, 30, 40, [13 37], [35 95], [35 95] };
+s.classNames = {'DoseObjectives.matRad_SquaredDeviation' ,'DoseObjectives.matRad_SquaredDeviation' ,'DoseObjectives.matRad_SquaredDeviation'...
+    'DoseObjectives.matRad_SquaredDeviation','DoseObjectives.matRad_SquaredDeviation','DoseObjectives.matRad_SquaredDeviation'...
+    'DoseObjectives.matRad_MaxDVH', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MinDVH'};
+s.penalties = {100, 100, 100, 100, 100, 100, 100, 1000, 1000 };
+
+
+for i = 1:size(cst, 1)
+    cst{i, 6} = []; % Assuming cst is a cell array
+end
+
+for i = 1:size(cst, 1)
+    for j = 1:size(s.VOIs, 2) % Iterate over the size of s.VOIs
+        % disp(cst{i, 2})
+        % disp(s.VOIs{j})
+        if strcmp(cst{i, 2}, s.VOIs{j}) % Use isequal to compare cell arrays
+            tempConstraint.className = s.classNames{j}; % Use {} to access elements in cell arrays
+            if size(s.Parameters{j},2) == 2
+                tempConstraint.parameters = {s.Parameters{j}(1), s.Parameters{j}(2)}; % Use {} to access elements in cell arrays
+            else
+                tempConstraint.parameters = {s.Parameters{j}}; % Use {} to access elements in cell arrays
+            end
+            tempConstraint.penalty = s.penalties{j};
+            cst{i, 6} = {tempConstraint};
+        end
+    end
+end
 %% Setting Up CST
 
 %defaultConstraint.className = 'DoseObjectives.matRad_SquaredDeviation';
 %defaultConstraint.className = 'DoseObjectives.matRad_SquaredOverdosing';
 
 %defaultConstraint.paramters = {30};
-defaultConstraint.penalty = 150;
-
-constraints = [-1,8.5,26,12,5,26,26,26,26,-1,-1,3,-1,7,20,-1,-1];
-
-%Change cst optim from SquaredOverdosing to SquaredDeviation
-for i = 1:size(cst,1)
-
-    if i >= 6 && i <= 9
-        defaultConstraint.className = 'DoseObjectives.matRad_SquaredUnderdosing';
-    else
-        defaultConstraint.className = 'DoseConstraints.matRad_MinMaxMeanDose';
-    end
-
-    % if ~isempty(cst{i,6})
-    %     cst{i,6}{1,1}.className = 'DoseObjectives.matRad_SquaredDeviation';
-    % end
-    defaultConstraint.parameters = {constraints(i)};
-    cst{i, 6} = {defaultConstraint};
-    %cst{i,3} = 'OAR';
-    
-
-    if constraints(i) == -1
-        cst{i,6} = [];
-    end
-end
-
-%cst{8, 3} = 'TARGET';
+% defaultConstraint.penalty = 150;
+% 
+% constraints = [-1,8.5,26,12,5,26,26,26,26,-1,-1,3,-1,7,20,-1,-1];
+% 
+% %Change cst optim from SquaredOverdosing to SquaredDeviation
+% for i = 1:size(cst,1)
+% 
+%     if i >= 6 && i <= 9
+%         defaultConstraint.className = 'DoseObjectives.matRad_SquaredUnderdosing';
+%     else
+%         defaultConstraint.className = 'DoseConstraints.matRad_MinMaxMeanDose';
+%     end
+% 
+%     % if ~isempty(cst{i,6})
+%     %     cst{i,6}{1,1}.className = 'DoseObjectives.matRad_SquaredDeviation';
+%     % end
+%     defaultConstraint.parameters = {constraints(i)};
+%     cst{i, 6} = {defaultConstraint};
+%     %cst{i,3} = 'OAR';
+% 
+% 
+%     if constraints(i) == -1
+%         cst{i,6} = [];
+%     end
+% end
 %%
 % Generate dose calculation, DAO, and FMO angles from the parameters input
 % above. FMO is performed only on the initGantryAngles set. In the DAO
@@ -123,8 +150,8 @@ dij2 = matRad_calcPhotonDose(ct,stf2,pln2,cst);
 % treatment. In VMAT, FMO is done only at the angles in the
 % initGantryAngles set. Once the optimization has finished, trigger once the GUI to
 % visualize the optimized dose cubes.
-resultGUI = matRad_fluenceOptimization(dij,cst,pln,stf);
-resultGUI2 = matRad_fluenceOptimization(dij2,cst,pln2,stf2); %can be skipped
+resultGUI = matRad_fluenceOptimization(dij,cst,pln,stf, 'LP054NonFFF.mat');
+%resultGUI2 = matRad_fluenceOptimization(dij2,cst,pln2,stf2); %can be skipped
 
 
 %% Sequencing
@@ -137,7 +164,7 @@ resultGUI2 = matRad_fluenceOptimization(dij2,cst,pln2,stf2); %can be skipped
 
 
 resultGUI = matRad_siochiLeafSequencing(resultGUI,stf,dij,pln,0);
-resultGUI2 = matRad_siochiLeafSequencing(resultGUI2,stf2,dij2,pln2,0);
+%resultGUI2 = matRad_siochiLeafSequencing(resultGUI2,stf2,dij2,pln2,0);
 %% Combine resultGUIs from both sequencing steps
 
 test = resultGUI;
@@ -179,8 +206,6 @@ newApertureInfo.doseTotalNumOfLeafPairs = test.apertureInfo.doseTotalNumOfLeafPa
 newApertureInfo.totalNumOfLeafPairs = test.apertureInfo.totalNumOfLeafPairs + test2.apertureInfo.totalNumOfLeafPairs;
 newApertureInfo.bixelWeights = [test.apertureInfo.bixelWeights; test2.apertureInfo.bixelWeights];
 newApertureInfo.bixelJApVec = [test.apertureInfo.bixelJApVec test2.apertureInfo.bixelJApVec];
-
-
 
 
 %Special modification for apertrueVector, mappingMx, limMx
@@ -258,16 +283,41 @@ dij3.totalNumOfRays = 2*dij.totalNumOfRays;
 dij3.bixelNum = [dij.bixelNum; dij2.bixelNum];
 dij3.rayNum = [dij.rayNum; dij2.rayNum];
 dij3.beamNum = [dij.beamNum; dij.numOfBeams + dij2.beamNum];
+
+
 dij3.physicalDose = {[dij.physicalDose{1} dij2.physicalDose{1}]};
+
+% %% Create new DIJ3 sparsely
+% dij3 = struct();
+% 
+% % Double the number of beams
+% dij3.numOfBeams = 2 * dij.numOfBeams;
+% 
+% % Double the total number of bixels
+% dij3.totalNumOfBixels = 2 * dij.totalNumOfBixels;
+% 
+% % Double the total number of rays
+% dij3.totalNumOfRays = 2 * dij.totalNumOfRays;
+% 
+% % Concatenate arrays vertically without converting to dense
+% dij3.bixelNum = [dij.bixelNum; dij2.bixelNum];
+% dij3.rayNum = [dij.rayNum; dij2.rayNum];
+% 
+% % Concatenate beam numbers and update accordingly
+% dij3.beamNum = [dij.beamNum; (dij.numOfBeams + dij2.beamNum)];
+% 
+% % Concatenate physical dose cell arrays
+% dij3.physicalDose = [dij.physicalDose; dij2.physicalDose];
 
 
 %% Calculate DAO3
-
-resultGUI3 = matRad_directApertureOptimization(dij3,cst,resultGUI3.apertureInfo,resultGUI3,pln3, 'LP054NonFFF.mat');
+resultGUI3 = matRad_directApertureOptimization(dij3,cst,resultGUI3.apertureInfo,resultGUI3,pln3);
+%% For single arc test DAO
+resultGUISingleArc = matRad_directApertureOptimization(dij,cst,resultGUI.apertureInfo,resultGUI,pln);
 
 %% open GUI
 resultGUI1 = resultGUI;
-resultGUI = resultGUI3;
+resultGUI = resultGUISingleArc;
 matRadGUI
 
 %%
@@ -281,6 +331,6 @@ dose_diff = abs(dose_org = dose_opti);
 matRad_visApertureInfo(resultGUI.apertureInfo);
 
 %% Indicator Calculation and display of DVH and QI
-[dvh,qi] = matRad_indicatorWrapper(cst,pln3,resultGUI);
-matRad_showDVH(dvh,cst,pln3);
+[dvh,qi] = matRad_indicatorWrapper(cst,pln,resultGUI);
+matRad_showDVH(dvh,cst,pln);
 

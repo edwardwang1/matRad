@@ -78,8 +78,12 @@ if exist('inititialDoseGridFileName','var')
                                                  loaded_dose_grid, ...
                                                 dij.doseGrid.x,dij.doseGrid.y',dij.doseGrid.z);
     for i = 1:size(cst,1)
-        new_param = resized_dose_grid(cst{i,4}{1});
-        cst{i,6}{1,1}.parameters = {new_param};        
+        if ~isempty(cst{i,6}) && ~ contains(cst{i,6}{1}.name, "DVH") 
+            if strcmp(cst{i,3}, 'OAR')
+                new_param = resized_dose_grid(cst{i,4}{1});
+                cst{i,6}{1,1}.parameters = {new_param};
+            end
+        end
     end                                      
 end
 
