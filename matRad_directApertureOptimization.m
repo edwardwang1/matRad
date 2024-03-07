@@ -81,7 +81,7 @@ if exist('inititialDoseGridFileName','var')
         if ~isempty(cst{i,6}) && ~ contains(cst{i,6}{1}.name, "DVH") 
             if strcmp(cst{i,3}, 'OAR')
                 new_param = resized_dose_grid(cst{i,4}{1});
-                cst{i,6}{1,1}.parameters = {new_param};
+                cst{i,6}{1,1}.parameters = {new_param/pln.numOfFractions};
             end
         end
     end                                      
