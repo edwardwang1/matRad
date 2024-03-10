@@ -1,4 +1,4 @@
-function [resultGUI,optimizer] = matRad_fluenceOptimization(dij,cst,pln,stf,inititialDoseGridFileName, wInit)
+function [resultGUI,optimizer] = matRad_fluenceOptimization(dij,cst,pln,stf,numArcs,inititialDoseGridFileName, wInit)
 % matRad inverse planning wrapper function
 % 
 % call
@@ -65,7 +65,7 @@ for i = 1:size(cst,1)
             end
         end
         
-        obj = obj.setDoseParameters(obj.getDoseParameters()/pln.numOfFractions);
+        obj = obj.setDoseParameters(obj.getDoseParameters()/pln.numOfFractions/numArcs);
         
         cst{i,6}{j} = obj;        
     end
@@ -89,7 +89,7 @@ if exist('inititialDoseGridFileName','var')
         if ~isempty(cst{i,6}) && ~ contains(cst{i,6}{1}.name, "DVH") 
             if strcmp(cst{i,3}, 'OAR')
                 new_param = resized_dose_grid(cst{i,4}{1});
-                cst{i,6}{1,1}.parameters = {new_param/pln.numOfFractions};
+                cst{i,6}{1,1}.parameters = {new_param/pln.numOfFractions/numArcs};
             end
         end
     end                                      
