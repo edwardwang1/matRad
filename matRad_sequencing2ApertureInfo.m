@@ -30,7 +30,7 @@ function apertureInfo = matRad_sequencing2ApertureInfo(sequencing,stf,pln)
 
 % MLC parameters:
 bixelWidth = stf(1).bixelWidth; % [mm]
-numOfMLCLeafPairs = 80;
+numOfMLCLeafPairs = 88; %80; 100 leaf pairs * 2.5mm MLC (coarse) == 28 LP * 5mm + 32LP *2.5mm (fine) ##Use 88 for MLC
 %     define central leaf pair (here we want the 0mm position to be in the
 %     center of a leaf pair (e.g. leaf 41 stretches from -2.5mm to 2.5mm
 %     for a bixel/leafWidth of 5mm and 81 leaf pairs)
