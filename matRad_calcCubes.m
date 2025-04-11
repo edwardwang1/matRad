@@ -50,7 +50,12 @@ beamInfo(dij.numOfBeams+1).suffix = '';
 beamInfo(dij.numOfBeams+1).logIx  = true(size(w));
 
 % compute physical dose for all beams individually and together
-for i = 1:length(beamInfo)
+% for i = 1:length(beamInfo)
+%     resultGUI.(['physicalDose', beamInfo(i).suffix]) = reshape(full(dij.physicalDose{scenNum} * (resultGUI.w .* beamInfo(i).logIx)),dij.doseGrid.dimensions);
+% end
+
+%We don't need the physical dose per beam
+for i = length(beamInfo):length(beamInfo)
     resultGUI.(['physicalDose', beamInfo(i).suffix]) = reshape(full(dij.physicalDose{scenNum} * (resultGUI.w .* beamInfo(i).logIx)),dij.doseGrid.dimensions);
 end
 
@@ -107,17 +112,30 @@ end
 % group similar fields together
 resultGUI = orderfields(resultGUI);
 
+
+dijDoseGrid = dij.doseGrid;
+dijCTGrid = dij.ctGrid;
+
+%clear variables to save memory
+clear w
+clear dij
+
 % interpolation if dose grid does not match ct grid
-if any(dij.ctGrid.dimensions~=dij.doseGrid.dimensions)
+% if any(dij.ctGrid.dimensions~=dij.doseGrid.dimensions)
+if any(dijCTGrid.dimensions~=dijDoseGrid.dimensions)
    myFields = fieldnames(resultGUI);
    for i = 1:numel(myFields)
       
-       if numel(resultGUI.(myFields{i})) == dij.doseGrid.numOfVoxels
+       %if numel(resultGUI.(myFields{i})) == dij.doseGrid.numOfVoxels
+       if numel(resultGUI.(myFields{i})) == dijDoseGrid.numOfVoxels
            
            % interpolate!
-           resultGUI.(myFields{i}) = matRad_interp3(dij.doseGrid.x,dij.doseGrid.y',dij.doseGrid.z, ...
-                                             resultGUI.(myFields{i}), ...
-                                             dij.ctGrid.x,dij.ctGrid.y',dij.ctGrid.z,'linear',0);
+           % resultGUI.(myFields{i}) = matRad_interp3(dij.doseGrid.x,dij.doseGrid.y',dij.doseGrid.z, ...
+           %                                   resultGUI.(myFields{i}), ...
+           %                                   dij.ctGrid.x,dij.ctGrid.y',dij.ctGrid.z,'linear',0);
+          resultGUI.(myFields{i}) = matRad_interp3(dijDoseGrid.x,dijDoseGrid.y',dijDoseGrid.z, ...
+                                 resultGUI.(myFields{i}), ...
+                                 dijCTGrid.x,dijCTGrid.y',dijCTGrid.z,'linear',0);
            
        end
        

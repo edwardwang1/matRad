@@ -122,7 +122,7 @@ end
 backProjection = matRad_DoseProjection();
 
 if pln.propOpt.runVMAT
-    apertureInfo = matRad_OptimizationProblemVMAT.matRad_daoVec2ApertureInfo(apertureInfo,apertureInfo.apertureVector);
+    apertureInfo = matRad_OptimizationProblemVMAT.matRad_daoVec2ApertureInfo(apertureInfo,apertureInfo.apertureVector); %%%This step already has overlapping MLC
     apertureInfo.newIteration = true; %do we need this?
     optiProb = matRad_OptimizationProblemVMAT(backProjection,apertureInfo);
 else
@@ -159,8 +159,6 @@ if pln.propOpt.preconditioner
     optApertureInfoVec(1:apertureInfo.totalNumOfShapes) = optApertureInfoVec(1:apertureInfo.totalNumOfShapes).*dij.scaleFactor;
 end
 
-
-
 % update the apertureInfoStruct and calculate bixel weights
 newApertureInfo = optiProb.matRad_daoVec2ApertureInfo(resultGUI.apertureInfo,optApertureInfoVec); %Use optiprob here to automatically choose VMAT / DAO code
 
@@ -174,6 +172,17 @@ newApertureInfo = matRad_preconditionFactors(newApertureInfo);
 
 % logging final results
 matRad_cfg.dispInfo('Calculating final cubes...\n');
+
+clear resultGUI %to save memory
+clear apertureInfo
+
+if exist('inititialDoseGridFileName','var')
+    %load true dose
+    clear loaded_dose_struct
+    clear loaded_dose_grid 
+    clear resized_dose_grid                           
+end
+
 
 resultGUI = matRad_calcCubes(w,dij);
 resultGUI.w    = w;
