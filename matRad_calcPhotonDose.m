@@ -98,7 +98,7 @@ if isFieldBasedDoseCalc
     intConvResolution = pln.propStf.collimation.convResolution; 
     fieldWidth = pln.propStf.collimation.fieldWidth;
 else
-    intConvResolution = .5; % [mm]
+    intConvResolution = .25; % [mm] was .5
     fieldWidth = pln.propStf.bixelWidth;
 end
 
@@ -113,7 +113,7 @@ fieldLimit = ceil(fieldWidth/(2*intConvResolution));
 if isfield(machine.data,'penumbraFWHMatIso')
     penumbraFWHM = machine.data.penumbraFWHMatIso;
 else
-    penumbraFWHM = 5;
+    penumbraFWHM = 5; %%Change this back to 5
     matRad_cfg.dispWarning('photon machine file does not contain measured penumbra width in machine.data.penumbraFWHMatIso. Assuming 5 mm.');
 end
 

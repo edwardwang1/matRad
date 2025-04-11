@@ -98,9 +98,29 @@ for i=1:size(stf,2)
     for l = 1:dimZ
         lim_lInd = find(rayMap(l,:),1,'first');
         lim_rInd = find(rayMap(l,:),1,'last');
+
+        %EW modification for multilesion, add check to see if there is a
+        %completed closed section in MLCs. For example, this might happen
+        %if there are two lesions that are relatively far from each other
+        %but treated with the same field. This should not happen in most
+        %cases
+
+
+        if lim_lInd
         % the physical position [mm] can be calculated from the indices
-        lim_l(l) = (lim_lInd-1)*bixelWidth + minX - 1/2*bixelWidth;
-        lim_r(l) = (lim_rInd-1)*bixelWidth + minX + 1/2*bixelWidth;
+            lim_l(l) = (lim_lInd-1)*bixelWidth + minX - 1/2*bixelWidth;
+        else
+            lim_l(l) = 0;
+        end
+        if lim_rInd
+            lim_r(l) = (lim_rInd-1)*bixelWidth + minX + 1/2*bixelWidth;
+        else
+            lim_r(l) = 0;
+        end
+
+        %following two lines are original matRad code
+        % lim_l(l) = (lim_lInd-1)*bixelWidth + minX - 1/2*bixelWidth; origin
+        % lim_r(l) = (lim_rInd-1)*bixelWidth + minX + 1/2*bixelWidth;
     end
     
     % get leaf positions for all shapes

@@ -271,7 +271,7 @@ if apertureInfo.propVMAT.continuousAperture
             shapeInd = shapeInd+1;
         end
     end
-    
+ 
     jacobStruct_lfspd = sparse(i_sparse,j_sparse,s_sparse,2*apertureInfo.beam(1).numOfActiveLeafPairs*apertureInfo.propVMAT.numLeafSpeedConstraint,numel(apertureInfo.apertureVector));
     
 else

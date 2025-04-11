@@ -128,8 +128,8 @@ if nargout > 1
                     error(['Could not find the following machine file: ' fileName ]);
                 end
                 
-                timeLimL = diff(apertureInfo.propVMAT.beam(i).DAOAngleBorders)/machine.constraints.gantryRotationSpeed(2); %Minimum time interval between two optimized beams/gantry angles
-                timeLimU = diff(apertureInfo.propVMAT.beam(i).DAOAngleBorders)/machine.constraints.gantryRotationSpeed(1); %Maximum time interval between two optimized beams/gantry angles
+                timeLimL = abs(diff(apertureInfo.propVMAT.beam(i).DAOAngleBorders)/machine.constraints.gantryRotationSpeed(2)); %Minimum time interval between two optimized beams/gantry angles
+                timeLimU = abs(diff(apertureInfo.propVMAT.beam(i).DAOAngleBorders)/machine.constraints.gantryRotationSpeed(1)); %Maximum time interval between two optimized beams/gantry angles
                 
                 mappingMx(counter+(apertureInfo.totalNumOfShapes+apertureInfo.totalNumOfLeafPairs*2),1) = i;
                 limMx(counter+(apertureInfo.totalNumOfShapes+apertureInfo.totalNumOfLeafPairs*2),:) = [timeLimL timeLimU];
