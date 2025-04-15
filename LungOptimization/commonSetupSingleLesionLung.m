@@ -42,9 +42,9 @@ function commonSetup = commonSetupSingleLesionLung(patient, datafile, cst, ct, p
     pln.propOpt.VMAToptions.finishingAngle = finishingAngle; 
     pln.propOpt.VMAToptions.continuousAperture = 0;
     
-    pln.propDoseCalc.doseGrid.resolution.x = 5; % [mm] 5
-    pln.propDoseCalc.doseGrid.resolution.y = 5; % [mm] 5
-    pln.propDoseCalc.doseGrid.resolution.z = 5; % [mm] 5
+    pln.propDoseCalc.doseGrid.resolution.x = 3; % [mm] 5
+    pln.propDoseCalc.doseGrid.resolution.y = 3; % [mm] 5
+    pln.propDoseCalc.doseGrid.resolution.z = 3  ; % [mm] 5
     
     [cst, constraint_cst] = updateCST(cst, ct, ptv_name, igtv_name, dose, num_fractions, pathToDose, method, useConstraint);
     pln = matRad_VMATGantryAngles(pln, cst, ct);
@@ -82,7 +82,7 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
     end
 
     %Get constraint CST
-    constraint_cst = generateConstraintCst(cst, ptv_name, igtv_name, dose, fraction, ct);
+    [constraint_cst, constraint_s] = generateConstraintCst(cst, ptv_name, igtv_name, dose, fraction, ct);
 
     %Create External_Eval
     external_eval_index = size(cst, 1) + 1;
@@ -120,6 +120,7 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
     cst{ring1cm_index, 2} = 'Ring1cm';
     cst{ring1cm_index, 3} = 'OAR';
     cst{ring1cm_index, 5} = cst{strcmp(cst(:, 2), 'External'), 5};
+    % cst{ring1cm_index, 5}.Priority = 3;     %Change priorty to 3
     cst{ring1cm_index, 6} = [];
     ring1cm_LinearIdx = {getExpansionMM(ct, 10, ptv_linearIdx{1})};
     ring1cm_LinearIdx{1}(ismember(ring1cm_LinearIdx{1}, ptv_linearIdx{1})) = []; 
@@ -203,19 +204,19 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
 
     %This chunk of code makes external eval interesct with the isodose
     %volume of the lowest constraint
-    % if fraction == 1
-    %     threshold = 7;
-    % elseif fraction == 3
-    %     threshold = 10.5;
-    % elseif fraction == 5
-    %     threshold = 12.5;
-    % elseif fraction == 8
-    %     threshold = 12.5;
-    % else
-    %     error('Invalid value for fraction')
-    % end
-    % greater_than_threshold_linear_idx = find(doseCube >= threshold);
-    % external_eval_LinearIdx = {intersect(external_eval_LinearIdx{1}, greater_than_threshold_linear_idx)};
+    if fraction == 1
+        threshold = 7;
+    elseif fraction == 3
+        threshold = 10.5;
+    elseif fraction == 5
+        threshold = 12.5;
+    elseif fraction == 8
+        threshold = 12.5;
+    else
+        error('Invalid value for fraction')
+    end
+    greater_than_threshold_linear_idx = find(doseCube >= threshold);
+    external_eval_LinearIdx = {intersect(external_eval_LinearIdx{1}, greater_than_threshold_linear_idx)};
 
 
     cst{external_eval_index, 4} = external_eval_LinearIdx;
@@ -226,6 +227,22 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
     % s.Parameters = {20, [dose 95], [dose 100], [dose * 1.5  1]};
     % s.classNames = {'DoseObjectives.matRad_SquaredDeviation', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MaxDVH'};
     % s.penalties = {100, 300, 300, 100};
+
+    % s.VOIs = {'External_Eval', ptv_name, ptv_name, 'Ring1cm'};
+    % s.Parameters = {20, [dose*1.03 95 100], [dose * 1.5  0], dose};
+    % s.classNames = {'DoseObjectives.matRad_SquaredOverdosing', 'DoseConstraints.matRad_MinMaxDVH', 'DoseObjectives.matRad_MaxDVH', 'DoseObjectives.matRad_SquaredOverdosing'};
+    % s.penalties = {10, 100, 100, 100};
+
+    % s.VOIs = {'External_Eval', ptv_name, ptv_name, 'Ring1cm'};
+    % s.Parameters = {20, [dose*1.03 95], [dose * 1.5  0], dose};
+    % s.classNames = {'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MaxDVH', 'DoseObjectives.matRad_SquaredOverdosing'};
+    % s.penalties = {10, 200, 100, 100};
+
+    s.VOIs = {'External_Eval', ptv_name, ptv_name, 'Ring1cm'};
+    s.Parameters = {20, [dose*1.03 95], [dose * 1.5  0], dose};
+    s.classNames = {'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MaxDVH', 'DoseObjectives.matRad_SquaredOverdosing'};
+    s.penalties = {100, 3000, 2000, 500};
+
 
     %Use squared overdosing for external_eval because we don't care if
     %optimized dose is better than predicted dose
@@ -239,8 +256,8 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
     % s.classNames = {'DoseObjectives.matRad_SquaredDeviation', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_SquaredOverdosing', 'DoseConstraints.matRad_MinMaxDose'};
     % s.penalties = {10, 1000, 1000, 1000, 0.001};
 
-    % s.VOIs = {'External_Eval', ptv_name, ptv_name, 'Esophagus'};
-    % s.Parameters = {20, [dose 95 100], dose * 1.2, 40};
+    % s.VOIs = {'External_Eval', ptv_name, 'Chestwall', 'Esophagus'};
+    % s.Parameters = {20, [dose*1.05 95 100], dose, 0.9*40};
     % s.classNames = {'DoseObjectives.matRad_SquaredDeviation', 'DoseConstraints.matRad_MinMaxDVH', 'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_SquaredOverdosing'};
     % s.penalties = {10, 1000, 1000, 1000};
 
@@ -250,11 +267,19 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
     % s.penalties = {200, 200, 200, 200, 50};
 
 
-    s.VOIs = {'External_Eval', ptv_name};
-    s.Parameters = {20, 1};
-    s.classNames = {'DoseObjectives.matRad_SquaredDeviation', 'DoseObjectives.matRad_SquaredUnderdosing'};
-    s.penalties = {100, 1};
+    % s.VOIs = {'External_Eval', ptv_name};
+    % s.Parameters = {20, 1};
+    % s.classNames = {'DoseObjectives.matRad_SquaredDeviation', 'DoseObjectives.matRad_SquaredUnderdosing'};
+    % s.penalties = {100, 1};
 
+    %Add OAR constraints based on constraint CST
+    for j = 1:size(constraint_s.VOIs, 2)
+        s.VOIs{end + 1} = constraint_s.VOIs{j};
+        s.Parameters{end + 1} = constraint_s.Parameters{j};
+        s.classNames{end + 1} = constraint_s.classNames{j};
+        s.penalties{end + 1} = constraint_s.penalties{j};
+    end
+    
 
     for j = 1:size(s.VOIs, 2)
         for i = 1:size(cst, 1)

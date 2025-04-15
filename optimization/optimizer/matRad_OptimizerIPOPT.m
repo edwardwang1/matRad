@@ -69,7 +69,7 @@ classdef matRad_OptimizerIPOPT < matRad_Optimizer
             obj.options.constr_viol_tol               = 1e-4; % (Opt3)
             obj.options.compl_inf_tol                 = 1e-4; % (Opt4), Optimal Solution Found if (Opt1),...,(Opt4) fullfiled
             
-            obj.options.acceptable_iter               = 5;    % (Acc1)
+            obj.options.acceptable_iter               = 100;    % (Acc1)
             obj.options.acceptable_tol                = 1e10; % (Acc2)
             obj.options.acceptable_constr_viol_tol    = 1e-2; % (Acc3)
             obj.options.acceptable_dual_inf_tol       = 1e10; % (Acc4)

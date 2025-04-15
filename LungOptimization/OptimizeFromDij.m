@@ -1,10 +1,8 @@
 %% Read csv file
 datafile = readtable('SingleLesionAllEQD2.csv');
-patients = readlines('test_backup.txt');
-doseParentDir = "E:\matRadData\SingleLesionGroundTruthDose\";
-%resultsDir = "LungOptimization/Results/DoseMetricsCSVs";
-doseSaveDir = "E:\matRadData\SingleLesionPhysicalDosesThresholdFromGroundTruth\";
-%doseSaveDir = "DoseSaveDirTemp";
+patients = readlines('test.txt');
+doseParentDir = "E:\matRadData\SingleLesionLungDosesPreprocessed\";
+doseSaveDir = "E:\matRadData\SingleLesionPhysicalDosesOptimizedFromPreprocessed\";
 
 %%
 for i = 1:numel(patients)
@@ -12,31 +10,52 @@ for i = 1:numel(patients)
     patient = patients(i);
     %runInversePlanning(patient, datafile, fullfile(doseParentDir, "GAN" + patient), fullfile(doseSaveDir, "GAN" + patient + ".mat"));
     %runInversePlanning(patient, datafile, fullfile(doseParentDir, "Unet" + patient),  fullfile(doseSaveDir, "Unet" + patient + ".mat"));
-    %runInversePlanning(patient, datafile, fullfile(doseParentDir, "HDUnet" + patient), fullfile(doseSaveDir, "HDUnet" + patient + ".mat"))
-    runInversePlanning(patient, datafile,  fullfile(doseParentDir, patient), fullfile(doseSaveDir, patient + ".mat"))
+    runInversePlanning(patient, datafile, fullfile(doseParentDir, "HDUnet" + patient), fullfile(doseSaveDir, "HDUnet" + patient + ".mat"))
+    %runInversePlanning(patient, datafile,  fullfile(doseParentDir, patient), fullfile(doseSaveDir, patient + ".mat"))
 end
-
-%%
-% load('E:\matRadData\SingleLesionLungPatients\LP386.mat');
-% load(fullfile(doseSaveDir, "HDUnet" + patient + ".mat"));
-% resultGUI.physicalDose = physicalDose;
-% matRadGUI;
 
 %% 
 %function resultGUI3 = runInversePlanning(patient, datafile, pathToPredDose, result_save_path, dose_save_path)
 function runInversePlanning(patient, datafile, pathToPredDose, dose_save_path)
     patientParentDir = "E:\matRadData\SingleLesionLungPatients\";
-    dijDir = "E:\\AutomatedLungSBRTPlanningData\dijPBK";
+    dijDir = "E:\\matRadData\dijPBK3";
     
     tic;
     matRad_rc
     load(fullfile(patientParentDir, patient));
     clear resultGUI %Don't need the original, save some memory
-    commonSetup = commonSetupSingleLesionLung(patient, datafile, cst, ct, pathToPredDose, "naive", false);
+    commonSetup = commonSetupSingleLesionLung(patient, datafile, cst, ct, pathToPredDose, "box", false);
     pln = commonSetup.pln;
     stf = commonSetup.stf;
     cst = commonSetup.cst;
     constraint_cst = commonSetup.constraint_cst;
+
+    %% update CST here to remove OARs which are not close to failing constraint
+    oars = {"Heart", "Esophagus", "Trachea", "BronchialTree", "SpinalCanal", "GreatVes", "Chestwall"};
+    dose = datafile(strcmp(datafile.Patient, patient), :).Dose;
+    dose_to_optimize_to = load(pathToPredDose).array;
+
+    for i = 1:length(oars)
+        o = oars{i};
+        maxDose = getMaxDose(cst, o, dose_to_optimize_to) * pln.numOfFractions;
+        constraint = getMaxConstraint(o, pln.numOfFractions, dose);        
+        if maxDose < 1 * constraint
+            cst{strcmp(cst(:, 2), o), 6} = {};
+        end
+        oar_indices_size = size(cst{strcmp(cst(:, 2), o), 4}{1});
+        if oar_indices_size(1) == 0
+            cst{strcmp(cst(:, 2), o), 6} = {};
+        end
+    end
+
+    %Set all priorities to 1
+    for i = 1:size(cst, 1)
+        cst{i, 5}.Priority = 1;
+    end
+
+    cst{strcmp(cst(:, 2), 'Lung_Eval'), 6} = {}; %Don't need this for single lesion lung
+
+    %% 
 
     pln.machine         = 'TBFFF_CustomFinal';
 
@@ -239,39 +258,39 @@ function runInversePlanning(patient, datafile, pathToPredDose, dose_save_path)
     
     %modify constraint_cst to only include oars that are close to
     %failing constraints
-    oars = {"Heart", "Esophagus", "Trachea", "BronchialTree", "SpinalCanal", "GreatVes", "Chestwall"};
-    dose = datafile(strcmp(datafile.Patient, patient), :).Dose;
-    for i = 1:length(oars)
-        o = oars{i};
-        maxDose = getMaxDose(constraint_cst, o, resultGUI3.physicalDose) * pln.numOfFractions;
-        constraint = getMaxConstraint(o, pln.numOfFractions, dose);        
-        if maxDose < 0.80 * constraint
-            constraint_cst{strcmp(constraint_cst(:, 2), o), 6} = {};
-        end
-        oar_indices_size = size(cst{strcmp(cst(:, 2), o), 4}{1});
-        if oar_indices_size(1) == 0
-            constraint_cst{strcmp(constraint_cst(:, 2), o), 6} = {};
-        end
-    end
-    
-    constraint_cst{strcmp(constraint_cst(:, 2), 'Lung_Eval'), 6} = {};
+    % oars = {"Heart", "Esophagus", "Trachea", "BronchialTree", "SpinalCanal", "GreatVes", "Chestwall"};
+    % dose = datafile(strcmp(datafile.Patient, patient), :).Dose;
+    % for i = 1:length(oars)
+    %     o = oars{i};
+    %     maxDose = getMaxDose(constraint_cst, o, resultGUI3.physicalDose) * pln.numOfFractions;
+    %     constraint = getMaxConstraint(o, pln.numOfFractions, dose);        
+    %     if maxDose < 0.80 * constraint
+    %         constraint_cst{strcmp(constraint_cst(:, 2), o), 6} = {};
+    %     end
+    %     oar_indices_size = size(cst{strcmp(cst(:, 2), o), 4}{1});
+    %     if oar_indices_size(1) == 0
+    %         constraint_cst{strcmp(constraint_cst(:, 2), o), 6} = {};
+    %     end
+    % end
+    % 
+    % constraint_cst{strcmp(constraint_cst(:, 2), 'Lung_Eval'), 6} = {};
 
     %resultGUI3 = matRad_directApertureOptimization(dij3,constraint_cst,resultGUI3.apertureInfo,resultGUI3,pln3, pathToPredDose);
 
     %% Getting data
-    prescription = datafile(strcmp(datafile.Patient, patient), :).Dose;
-    ptv_name = datafile(strcmp(datafile.Patient, patient), :).PTVs{1};
+    % prescription = datafile(strcmp(datafile.Patient, patient), :).Dose;
+    % ptv_name = datafile(strcmp(datafile.Patient, patient), :).PTVs{1};
     
     %% Scaling dose by number of fractions
     physicalDose = resultGUI3.physicalDose * pln.numOfFractions;
 
     % Rescaling so that PTV 95 is prescription
-    d95 = getDoseAtXPercentOfVolume(cst, ptv_name, physicalDose, 95);
+    % d95 = getDoseAtXPercentOfVolume(cst, ptv_name, physicalDose, 95);
     %physicalDose = physicalDose / (d95 / prescription);
     
-    disp(d95)
-    r100 = getR100(cst, ptv_name, physicalDose, prescription);
-    disp(r100)
+    % disp(d95)
+    % r100 = getR100(cst, ptv_name, physicalDose, prescription);
+    % disp(r100)
     
     %%Calculating Dose Metrics
     %doseMetricsTable = getDoseMetrics(cst, physicalDose, ct, ptv_name, prescription, result_save_path);
@@ -280,6 +299,7 @@ function runInversePlanning(patient, datafile, pathToPredDose, dose_save_path)
 
 
 end
+
 
 function r100 = getR100(cst, ptvName, doseCube, prescription)
 indices     = cst{strcmp(cst(:, 2), ptvName), 4}{1};
@@ -299,6 +319,15 @@ indices     = cst{strcmp(cst(:, 2), oarName), 4}{1};
 doseInVOI = doseCube(indices);
 
 maxDose = max(doseInVOI);
+end
+
+function maxDose = getMaxDoseToXCC(cst, oarName, doseCube, singleVoxelVolumeInCC, numOfCC)
+indices     = cst{strcmp(cst(:, 2), oarName), 4}{1};
+doseInVOI = doseCube(indices);
+sortedDose = sort(doseInVOI, 'descend');
+numVoxelsNeeded = int32(numOfCC / singleVoxelVolumeInCC);
+maxDose = sortedDose(numVoxelsNeeded);
+
 end
 
 function maxConstraint = getMaxConstraint(oarName, fraction, prescription)

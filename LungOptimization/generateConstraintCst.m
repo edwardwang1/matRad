@@ -1,12 +1,17 @@
-function cst = generateConstraintCst(cst, ptvs, igtvs, prescription, fraction, ct)
+function [cst, s] = generateConstraintCst(cst, ptvs, igtvs, prescription, fraction, ct)
 ccPerVoxel = ct.resolution.x / 10 * ct.resolution.y / 10 * ct.resolution.z / 10;
 if ~iscell(prescription)
     prescription = {prescription};
 end
 max_prescription = 0;
 for i = 1:length(prescription)
-    if str2double(prescription{i}) > max_prescription
-        max_prescription = str2double(prescription{i});
+    if ~isnumeric(prescription{i})
+        currPrescription = str2double(prescription{i});
+    else
+        currPrescription = prescription{i};
+    end
+    if currPrescription > max_prescription
+        max_prescription = currPrescription;
     end
 end
 
@@ -179,13 +184,13 @@ s.VOIs = {'Lung_Eval', ...
     };
 
 s.Parameters = {[20, lungv20]...
-    [scDmax], ...
-    [heartDmax], ...
-    [esoDmax], ...
-    [tracheaDmax], ...
-    [pbtDmax], ...
-    [gvDmax], ...
-    [cwDmax], ...
+    [0.97 * scDmax], ...
+    [0.97 * heartDmax], ...
+    [0.97 * esoDmax], ...
+    [0.97 * tracheaDmax], ...
+    [0.97 * pbtDmax], ...
+    [0.97 * gvDmax], ...
+    [0.97 * cwDmax], ...
     }; 
 s.classNames = {'DoseObjectives.matRad_MaxDVH', ... %Lung
 'DoseObjectives.matRad_SquaredOverdosing', ... %SC
@@ -196,14 +201,14 @@ s.classNames = {'DoseObjectives.matRad_MaxDVH', ... %Lung
 'DoseObjectives.matRad_SquaredOverdosing', ... %GV
 'DoseObjectives.matRad_SquaredOverdosing', ... %CW
 };
-s.penalties = {200, ...%Lung
-    200, ... %SC
-    200, ... %Heart
-    200, ... %Eso
-    200, ... %Trachea
-    200, ... %PBT
-    200, ... %GV
-    200, ... %CW
+s.penalties = {2000, ...%Lung
+    2000, ... %SC
+    2000, ... %Heart
+    2000, ... %Eso
+    2000, ... %Trachea
+    2000, ... %PBT
+    2000, ... %GV
+    2000, ... %CW
     };
 
 % for i = 1:length(ptvs)
@@ -228,27 +233,29 @@ s.penalties = {200, ...%Lung
 %     s.penalties{end+1} = 200;
 % end
 
-for i = 1:length(ptvs)
-    ptv_name = ptvs{i};
-    igtv_name = igtvs{i};
-    if isstring(prescription{i})
-        dose = str2double();
-    else
-        dose = prescription{i};
-    end
-    s.VOIs{end+1} = ptv_name;
-    s.VOIs{end+1} = ptv_name;
-    s.VOIs{end+1} = ptv_name;
-    s.Parameters{end+1} = [dose 95];
-    s.Parameters{end+1} = [dose * 0.9 99];
-    s.Parameters{end+1} = [dose * 1.2];
-    s.classNames{end+1} = 'DoseObjectives.matRad_MinDVH';
-    s.classNames{end+1} = 'DoseObjectives.matRad_MinDVH';
-    s.classNames{end+1} = 'DoseObjectives.matRad_SquaredOverdosing';
-    s.penalties{end+1} = 200;
-    s.penalties{end+1} = 200;
-    s.penalties{end+1} = 200;
-end
+%Comment this out for now, only include oar constraints
+
+% for i = 1:length(ptvs)
+%     ptv_name = ptvs{i};
+%     igtv_name = igtvs{i};
+%     if isstring(prescription{i})
+%         dose = str2double();
+%     else
+%         dose = prescription{i};
+%     end
+%     s.VOIs{end+1} = ptv_name;
+%     s.VOIs{end+1} = ptv_name;
+%     s.VOIs{end+1} = ptv_name;
+%     s.Parameters{end+1} = [dose 95];
+%     s.Parameters{end+1} = [dose * 0.9 99];
+%     s.Parameters{end+1} = [dose * 1.2];
+%     s.classNames{end+1} = 'DoseObjectives.matRad_MinDVH';
+%     s.classNames{end+1} = 'DoseObjectives.matRad_MinDVH';
+%     s.classNames{end+1} = 'DoseObjectives.matRad_SquaredOverdosing';
+%     s.penalties{end+1} = 200;
+%     s.penalties{end+1} = 200;
+%     s.penalties{end+1} = 200;
+% end
 
 for i = 1:size(cst, 1)
     cst{i, 6} = []; % Assuming cst is a cell array
