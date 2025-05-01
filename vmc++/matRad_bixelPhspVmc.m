@@ -98,7 +98,8 @@ if writeFiles
             
             % modify max/min energies, increment number of photons
             % must determine particle type using LATCH
-            LATCH = de2bi(record.LATCH,32);
+            %LATCH = de2bi(record.LATCH,32);
+            LATCH = dec2bin(record.LATCH,32);
             if LATCH(30:31) == [0 0]
                 % photon
                 header_bixels{bixelInd}.EKMAXPHSP   = max(header_bixels{bixelInd}.EKMAXPHSP,abs(record.E));
