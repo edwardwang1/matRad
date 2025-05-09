@@ -92,10 +92,13 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
     cst{external_eval_index, 4} = cst{strcmp(cst(:, 2), 'External'), 4};
     cst{external_eval_index, 5} = cst{strcmp(cst(:, 2), 'External'), 5};
     cst{external_eval_index, 6} = [];
-    %Remove PTV indices
+
     ptv_linearIdx = cst{strcmp(cst(:, 2), ptv_name), 4};
-    external_eval_LinearIdx = cst{external_eval_index, 4};
-    external_eval_LinearIdx{1}(ismember(external_eval_LinearIdx{1}, ptv_linearIdx{1})) = []; 
+    if ~strcmp(method, "naive")
+        %Remove PTV indices
+        external_eval_LinearIdx = cst{external_eval_index, 4};
+        external_eval_LinearIdx{1}(ismember(external_eval_LinearIdx{1}, ptv_linearIdx{1})) = []; 
+    end
 
     %Create Lung_Eval
     lung_eval_index = size(cst, 1) + 1;
@@ -127,7 +130,8 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
     cst{ring1cm_index, 4} = ring1cm_LinearIdx;
     
     %Update external_eval depending on method if necessary
-    if strcmp(method, "naive")
+    if strcmp(method, "naive") || strcmp(method, "hybrid")
+        external_eval_LinearIdx = cst{external_eval_index, 4};
     elseif strcmp(method, "box")
         %Create a 50mm box around the center of the PTV
         [ptv_x, ptv_y, ptv_z] = ind2sub(ct.cubeDim, ptv_linearIdx{1});
@@ -160,8 +164,6 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
             new_oar_indices = {intersect(oar_indices{1}, box_linear_idx)};
             cst{strcmp(cst(:, 2), o), 4} = new_oar_indices;
         end
-
-
     elseif strcmp(method, "threshold")
         if fraction == 1
             threshold = 7;
@@ -204,6 +206,8 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
 
     %This chunk of code makes external eval interesct with the isodose
     %volume of the lowest constraint
+
+
     if fraction == 1
         threshold = 7;
     elseif fraction == 3
@@ -238,10 +242,24 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
     % s.classNames = {'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MaxDVH', 'DoseObjectives.matRad_SquaredOverdosing'};
     % s.penalties = {10, 200, 100, 100};
 
-    s.VOIs = {'External_Eval', ptv_name, ptv_name, 'Ring1cm'};
-    s.Parameters = {20, [dose*1.03 95], [dose * 1.5  0], dose};
-    s.classNames = {'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MaxDVH', 'DoseObjectives.matRad_SquaredOverdosing'};
-    s.penalties = {100, 3000, 2000, 500};
+    % s.VOIs = {'External_Eval', ptv_name, ptv_name, 'Ring1cm'};
+    % s.Parameters = {20, [dose*1.03 95], [dose * 1.5  0], dose};
+    % s.classNames = {'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MaxDVH', 'DoseObjectives.matRad_SquaredOverdosing'};
+    % s.penalties = {100, 3000, 2000, 500};
+
+    if strcmp(method, "hybrid")
+        s.VOIs = {'External_Eval', ptv_name, ptv_name, 'Ring1cm', 'Lung_Eval'};
+        s.Parameters = {20, [dose*1.03 95], [dose * 1.5  0], dose, [20, 6]};
+        s.classNames = {'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MaxDVH', 'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_MaxDVH'};
+        s.penalties = {100, 3000, 2000, 500, 2000};
+    elseif strcmp(method, "naive")
+        s.VOIs = {'External_Eval', ptv_name, ptv_name};
+        s.Parameters = {20, [dose*1.03 95], [dose * 1.5  0]};
+        s.classNames = {'DoseObjectives.matRad_SquaredOverdosing', 'DoseObjectives.matRad_MinDVH', 'DoseObjectives.matRad_MaxDVH'};
+        s.penalties = {100, 200, 200,};
+    else
+        error("Not yet implemented")
+    end
 
 
     %Use squared overdosing for external_eval because we don't care if
@@ -272,15 +290,17 @@ function [cst, constraint_cst]  = updateCST(cst, ct, ptv_name, igtv_name, dose, 
     % s.classNames = {'DoseObjectives.matRad_SquaredDeviation', 'DoseObjectives.matRad_SquaredUnderdosing'};
     % s.penalties = {100, 1};
 
-    %Add OAR constraints based on constraint CST
-    for j = 1:size(constraint_s.VOIs, 2)
-        s.VOIs{end + 1} = constraint_s.VOIs{j};
-        s.Parameters{end + 1} = constraint_s.Parameters{j};
-        s.classNames{end + 1} = constraint_s.classNames{j};
-        s.penalties{end + 1} = constraint_s.penalties{j};
+    if strcmp(method, "hybrid")
+        %Add OAR constraints based on constraint CST
+        for j = 1:size(constraint_s.VOIs, 2)
+            s.VOIs{end + 1} = constraint_s.VOIs{j};
+            s.Parameters{end + 1} = constraint_s.Parameters{j};
+            s.classNames{end + 1} = constraint_s.classNames{j};
+            s.penalties{end + 1} = constraint_s.penalties{j};
+        end
     end
     
-
+    
     for j = 1:size(s.VOIs, 2)
         for i = 1:size(cst, 1)
             % disp(cst{i, 2})
