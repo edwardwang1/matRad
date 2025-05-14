@@ -193,8 +193,8 @@ for i = 1:length(pln.propStf.gantryAngles)
             x_min = min(x_loc);
             x_max = max(x_loc);
             x = [x; (x_min:pln.propStf.bixelWidth:x_max)'];
-            y = [y; zeros((x_max-x_min)/pln.propStf.bixelWidth+1,1)];
-            z = [z; uniZ(j)*ones((x_max-x_min)/pln.propStf.bixelWidth+1,1)];
+            y = [y; zeros(int16((x_max-x_min)/pln.propStf.bixelWidth+1),1)];
+            z = [z; uniZ(j)*ones(int16((x_max-x_min)/pln.propStf.bixelWidth+1),1)];
         end
         rayPos = [x,y,z];
     end
@@ -580,8 +580,8 @@ if pln.propOpt.runVMAT
         x_min = min(x_loc);
         x_max = max(x_loc);
         x = [x; (x_min:pln.propStf.bixelWidth:x_max)'];
-        y = [y; zeros((x_max-x_min)/pln.propStf.bixelWidth+1,1)];
-        z = [z; uniZ(j)*ones((x_max-x_min)/pln.propStf.bixelWidth+1,1)];
+        y = [y; zeros(int16((x_max-x_min)/pln.propStf.bixelWidth+1),1)];
+        z = [z; uniZ(j)*ones(int16((x_max-x_min)/pln.propStf.bixelWidth+1),1)];
     end
     
     masterRayPosBEV = [x,y,z];

@@ -17,9 +17,6 @@ function commonSetup = commonSetupMultiLesionSingleIsoLung(patient, datafile, cs
     
     pln.numOfFractions  = num_fractions;
     
-    % beam geometry settings
-    pln.propStf.bixelWidth = 2.5; 
-    
     % optimization settings
     pln.propOpt.bioOptimization = 'none';
     pln.propOpt.runVMAT         = true;
@@ -58,7 +55,12 @@ function commonSetup = commonSetupMultiLesionSingleIsoLung(patient, datafile, cs
     cst = updateCST(cst, ct, ptv_name, igtv_name, dose, num_fractions, pathToDose, method, useConstraint);
     if true
         pln = setVMCParams(pln, patient);
+        %pln.propStf.bixelWidth = round(2.5 * pln.propDoseCalc.vmcOptions.SAD / pln.propDoseCalc.vmcOptions.SCD, 4);
+        pln.propStf.bixelWidth = 4.545; 
+    else
+        pln.propStf.bixelWidth = 2.5; 
     end
+
     pln = matRad_VMATGantryAngles(pln, cst, ct);
     
     %% Generate Beam Geometry STF
@@ -361,4 +363,5 @@ function pln = setVMCParams(pln, patient)
     pln.propDoseCalc.vmcOptions.SCD = 550; %550 is our truebeam data
     pln.propDoseCalc.vmcOptions.SAD = 1000;
     pln.propDoseCalc.vmcOptions.dumpDose = 1;
+    pln.propDoseCalc.vmcOptions.nCasePerBixel = 750000;
 end
