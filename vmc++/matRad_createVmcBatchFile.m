@@ -56,7 +56,7 @@ if ispc % parallelization only possible on windows systems
     
 elseif isunix
     
-    batchFile = {'./bin/vmc_Linux.exe MCpencilbeam_temp_1'};
+    batchFile = {'./bin/vmcpp -i MCpencilbeam_temp_1 > /dev/null 2>&1'};
 
 end
 

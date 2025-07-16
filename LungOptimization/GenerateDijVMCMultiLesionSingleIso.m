@@ -10,8 +10,8 @@ patients = readlines('testForVMC.txt');
 for i = 1:numel(patients)
     patient = patients(i);
     dij = setup(patient, datafile);
-    savefilename = fullfile('E:\matRadData\dijVMCMultiLesion3', patient + '.mat');
-    %save(savefilename, 'dij', '-v7.3');
+    savefilename = fullfile('~/projects/def-mattonen/edwardw1/matRadData/dijVMCMultiLesion3', patient + '.mat');
+    save(savefilename, 'dij', '-v7.3');
     % break
 toc;
 end
@@ -19,18 +19,17 @@ end
 
 %%
 function dij = setup(patient, datafile)
-    patientParentDir = "E:\matRadData\MultiLesionSingleIsoLungPatientsResampled333";
+    patientParentDir = "~/projects/def-mattonen/edwardw1/matRadData/MultiLesionSingleIsoLungPatientsResampled333";
     matRad_rc
     load(fullfile(patientParentDir, patient));
-    doseParentDir = "E:\matRadData\MultiLesionSingleIsoLungDoses";
+    doseParentDir = "~/projects/def-mattonen/edwardw1/matRadData/MultiLesionSingleIsoLungDoses";
     pathToDose = fullfile(doseParentDir, "GAN" + patient);
     commonSetup = commonSetupMultiLesionSingleIsoLung(patient, datafile, cst, ct, pathToDose, "naive", false);
     pln = commonSetup.pln;
     stf = commonSetup.stf;
     cst = commonSetup.cst;
     pln.machine         = 'TBFFF_CustomFinal';
-    dij = 0;
-    %dij = matRad_calcPhotonDose(ct,stf,pln,cst);
+    dij = matRad_calcPhotonDoseVmc(ct,stf,pln,cst, 0);
 end
 
 %%  

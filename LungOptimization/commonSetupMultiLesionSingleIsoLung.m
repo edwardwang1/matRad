@@ -56,7 +56,7 @@ function commonSetup = commonSetupMultiLesionSingleIsoLung(patient, datafile, cs
     if true
         pln = setVMCParams(pln, patient);
         %pln.propStf.bixelWidth = round(2.5 * pln.propDoseCalc.vmcOptions.SAD / pln.propDoseCalc.vmcOptions.SCD, 4);
-        pln.propStf.bixelWidth = 4.545; 
+        pln.propStf.bixelWidth = 2.5; 
     else
         pln.propStf.bixelWidth = 2.5; 
     end
@@ -359,9 +359,9 @@ function pln = setVMCParams(pln, patient)
     pln.propDoseCalc.vmc = 1;
     pln.propDoseCalc.vmcOptions.source = 'phsp';
     pln.propDoseCalc.vmcOptions.version = 'Carleton';
-    pln.propDoseCalc.vmcOptions.phspBaseName = append(patient, '_Varian_6FFF_F5-EW');
-    pln.propDoseCalc.vmcOptions.SCD = 550; %550 is our truebeam data
+    pln.propDoseCalc.vmcOptions.phspBaseName = append(patient, '_Varian_6FFF_F4-EW-photons-noZlast');
+    pln.propDoseCalc.vmcOptions.SCD = 533;
     pln.propDoseCalc.vmcOptions.SAD = 1000;
     pln.propDoseCalc.vmcOptions.dumpDose = 1;
-    pln.propDoseCalc.vmcOptions.nCasePerBixel = 750000;
+    pln.propDoseCalc.vmcOptions.nCasePerBixel = 1000000;
 end

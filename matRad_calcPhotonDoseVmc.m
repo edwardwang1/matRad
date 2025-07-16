@@ -30,7 +30,7 @@ end
 
 % set output level. 0 = no vmc specific output. 1 = print to matlab cmd.
 % 2 = open in terminal(s)
-verbose = 0;
+verbose = 1;
 
 if ~isdeployed % only if _not_ running as standalone    
     % add path for optimization functions
@@ -49,6 +49,8 @@ dij.weightToMU         = 100;
 dij.scaleFactor        = 1;
 dij.totalNumOfBixels   = sum([stf(:).totalNumOfBixels]);
 dij.totalNumOfRays     = sum(dij.numOfRaysPerBeam);
+
+matRad_calcDoseInit;
 
 % check if full dose influence data is required
 if calcDoseDirect 
@@ -69,12 +71,12 @@ rayNum   = NaN*ones(dij.totalNumOfBixels,1);
 beamNum  = NaN*ones(dij.totalNumOfBixels,1);
 
 doseTmpContainer        = cell(numOfBixelsContainer,dij.numOfScenarios);
-doseTmpContainerError   = cell(numOfBixelsContainer,dij.numOfScenarios);
+%doseTmpContainerError   = cell(numOfBixelsContainer,dij.numOfScenarios);
 
 % Allocate space for dij.physicalDose sparse matrix
 for i = 1:dij.numOfScenarios
     dij.physicalDose{i} = spalloc(prod(ct.cubeDim),numOfColumnsDij,1);
-    dij.physicalDoseError{i} = spalloc(prod(ct.cubeDim),numOfColumnsDij,1);
+    %dij.physicalDoseError{i} = spalloc(prod(ct.cubeDim),numOfColumnsDij,1);
 end
 
 % set environment variables for vmc++
@@ -98,7 +100,7 @@ else
     setenv('xvmc_dir',VMCPath);
     
     if isunix
-        system(['chmod a+x ' VMCPath filesep 'bin' filesep 'vmc_Linux.exe']);
+        system(['chmod a+x ' VMCPath filesep 'bin' filesep 'vmcpp']);
     end
     
 end
@@ -232,8 +234,9 @@ for i = 1:dij.numOfBeams % loop over all beams
             %% perform vmc++ simulation
             current = pwd;
             cd(VMCPath);
+            disp(['VMC Path' '_ ' VMCPath]);
             if verbose > 0 % only show output if verbose level > 0
-                dos('run_parallel_simulations.bat');
+                dos('./run_parallel_simulations.bat');
                 fprintf(['Completed ' num2str(writeCounter) ' of ' num2str(dij.totalNumOfBixels) ' beamlets...\n']);
             else
                 [dummyOut1,dummyOut2] = dos('run_parallel_simulations.bat'); % supress output by assigning dummy output arguments
@@ -254,7 +257,8 @@ for i = 1:dij.numOfBeams % loop over all beams
                     case 'dkfz'
                         filename = sprintf('%s%d_%s.dos',outfile(1:idx(2)),k,VmcOptions.scoringOptions.outputOptions.name);
                 end
-                [bixelDose,bixelDoseError] = matRad_readDoseVmc(fullfile(runsPath,filename),VmcOptions);
+                disp(fullfile(runsPath,filename))
+                [bixelDose,~] = matRad_readDoseVmc(fullfile(runsPath,filename),VmcOptions);
                 
                 %{
                 %%% Don't do any sampling, since the correct error is
@@ -284,12 +288,14 @@ for i = 1:dij.numOfBeams % loop over all beams
                 %}
 
                 % apply absolute calibration factor
-                bixelDoseError  = sqrt((VmcOptions.run.absCalibrationFactorVmc.*bixelDoseError).^2+(bixelDose.*VmcOptions.run.absCalibrationFactorVmc_err).^2);
+                %bixelDoseError  = sqrt((VmcOptions.run.absCalibrationFactorVmc.*bixelDoseError).^2+(bixelDose.*VmcOptions.run.absCalibrationFactorVmc_err).^2);
                 bixelDose       = bixelDose*VmcOptions.run.absCalibrationFactorVmc;
+                
+                bixelDose( bixelDose < 1e-4 ) = 0;
 
                 % Save dose for every bixel in cell array
                 doseTmpContainer{mod(readCounter-1,numOfBixelsContainer)+1,1}       = sparse(V,1,bixelDose(V),dij.numOfVoxels,1);
-                doseTmpContainerError{mod(readCounter-1,numOfBixelsContainer)+1,1}  = sparse(V,1,bixelDoseError(V),dij.numOfVoxels,1);
+                %doseTmpContainerError{mod(readCounter-1,numOfBixelsContainer)+1,1}  = sparse(V,1,bixelDoseError(V),dij.numOfVoxels,1);
                 
                 % save computation time and memory by sequentially filling the 
                 % sparse matrix dose.dij from the cell array
@@ -298,7 +304,7 @@ for i = 1:dij.numOfBeams % loop over all beams
                         if isfield(stf(beamNum(readCounter)).ray(rayNum(readCounter)),'weight')
                             % score physical dose
                             dij.physicalDose{1}(:,i)        = dij.physicalDose{1}(:,i) + stf(beamNum(readCounter)).ray(rayNum(readCounter)).weight{1} * doseTmpContainer{1,1};
-                            dij.physicalDoseError{1}(:,i)   = sqrt(dij.physicalDoseError{1}(:,i).^2 + (stf(beamNum(readCounter)).ray(rayNum(readCounter)).weight{1} * doseTmpContainerError{1,1}).^2);
+                            %dij.physicalDoseError{1}(:,i)   = sqrt(dij.physicalDoseError{1}(:,i).^2 + (stf(beamNum(readCounter)).ray(rayNum(readCounter)).weight{1} * doseTmpContainerError{1,1}).^2);
                         else
                             error(['No weight available for beam ' num2str(beamNum(readCounter)) ', ray ' num2str(rayNum(readCounter))]);
                         end
@@ -307,8 +313,8 @@ for i = 1:dij.numOfBeams % loop over all beams
                         dij.physicalDose{1}(:,(ceil(readCounter/numOfBixelsContainer)-1)*numOfBixelsContainer+1:readCounter) = ...
                             [doseTmpContainer{1:mod(readCounter-1,numOfBixelsContainer)+1,1}];
                         
-                        dij.physicalDoseError{1}(:,(ceil(readCounter/numOfBixelsContainer)-1)*numOfBixelsContainer+1:readCounter) = ...
-                            [doseTmpContainerError{1:mod(readCounter-1,numOfBixelsContainer)+1,1}];
+                        % dij.physicalDoseError{1}(:,(ceil(readCounter/numOfBixelsContainer)-1)*numOfBixelsContainer+1:readCounter) = ...
+                        %     [doseTmpContainerError{1:mod(readCounter-1,numOfBixelsContainer)+1,1}];
                     end
                 end
             end
