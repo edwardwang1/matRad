@@ -22,6 +22,10 @@ fid = fopen(filename,'r');
 
 % read header (no regions, no histories, no batches, no beamlets, format specifier (dump_dose))
 switch VmcOptions.run.version
+    case 'vfcc'
+        Header      = fread(fid,1,'int32');
+        no_regions  = Header(1);
+        dump_dose   = VmcOptions.scoringOptions.outputOptions.dumpDose;
     case 'Carleton'
         Header      = fread(fid,1,'int32');
         no_regions  = Header(1);

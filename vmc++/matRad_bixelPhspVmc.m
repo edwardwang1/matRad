@@ -6,6 +6,8 @@ function stf = matRad_bixelPhspVmc(stf,masterRayPosBEV,vmcOptions)
 
 
 switch vmcOptions.version
+    case 'vfcc'
+        phspPath = fullfile(fileparts(mfilename('fullpath')), 'run', 'phsp');
     case 'Carleton'
         phspPath = fullfile(fileparts(mfilename('fullpath')), 'run', 'phsp');
     case 'dkfz'

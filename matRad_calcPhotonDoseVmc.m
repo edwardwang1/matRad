@@ -71,12 +71,12 @@ rayNum   = NaN*ones(dij.totalNumOfBixels,1);
 beamNum  = NaN*ones(dij.totalNumOfBixels,1);
 
 doseTmpContainer        = cell(numOfBixelsContainer,dij.numOfScenarios);
-%doseTmpContainerError   = cell(numOfBixelsContainer,dij.numOfScenarios);
+doseTmpContainerError   = cell(numOfBixelsContainer,dij.numOfScenarios);
 
 % Allocate space for dij.physicalDose sparse matrix
 for i = 1:dij.numOfScenarios
     dij.physicalDose{i} = spalloc(prod(ct.cubeDim),numOfColumnsDij,1);
-    %dij.physicalDoseError{i} = spalloc(prod(ct.cubeDim),numOfColumnsDij,1);
+    dij.physicalDoseError{i} = spalloc(prod(ct.cubeDim),numOfColumnsDij,1);
 end
 
 % set environment variables for vmc++
@@ -288,14 +288,15 @@ for i = 1:dij.numOfBeams % loop over all beams
                 %}
 
                 % apply absolute calibration factor
-                %bixelDoseError  = sqrt((VmcOptions.run.absCalibrationFactorVmc.*bixelDoseError).^2+(bixelDose.*VmcOptions.run.absCalibrationFactorVmc_err).^2);
+                bixelDoseError  = sqrt((VmcOptions.run.absCalibrationFactorVmc.*bixelDoseError).^2+(bixelDose.*VmcOptions.run.absCalibrationFactorVmc_err).^2);
                 bixelDose       = bixelDose*VmcOptions.run.absCalibrationFactorVmc;
                 
-                bixelDose( bixelDose < 1e-4 ) = 0;
+                % bixelDose( bixelDose < 1e-4 ) = 0; %This removes small
+                % contributions in the DIJ to speed up the calculation
 
                 % Save dose for every bixel in cell array
                 doseTmpContainer{mod(readCounter-1,numOfBixelsContainer)+1,1}       = sparse(V,1,bixelDose(V),dij.numOfVoxels,1);
-                %doseTmpContainerError{mod(readCounter-1,numOfBixelsContainer)+1,1}  = sparse(V,1,bixelDoseError(V),dij.numOfVoxels,1);
+                doseTmpContainerError{mod(readCounter-1,numOfBixelsContainer)+1,1}  = sparse(V,1,bixelDoseError(V),dij.numOfVoxels,1);
                 
                 % save computation time and memory by sequentially filling the 
                 % sparse matrix dose.dij from the cell array
@@ -304,7 +305,7 @@ for i = 1:dij.numOfBeams % loop over all beams
                         if isfield(stf(beamNum(readCounter)).ray(rayNum(readCounter)),'weight')
                             % score physical dose
                             dij.physicalDose{1}(:,i)        = dij.physicalDose{1}(:,i) + stf(beamNum(readCounter)).ray(rayNum(readCounter)).weight{1} * doseTmpContainer{1,1};
-                            %dij.physicalDoseError{1}(:,i)   = sqrt(dij.physicalDoseError{1}(:,i).^2 + (stf(beamNum(readCounter)).ray(rayNum(readCounter)).weight{1} * doseTmpContainerError{1,1}).^2);
+                            dij.physicalDoseError{1}(:,i)   = sqrt(dij.physicalDoseError{1}(:,i).^2 + (stf(beamNum(readCounter)).ray(rayNum(readCounter)).weight{1} * doseTmpContainerError{1,1}).^2);
                         else
                             error(['No weight available for beam ' num2str(beamNum(readCounter)) ', ray ' num2str(rayNum(readCounter))]);
                         end
@@ -313,8 +314,8 @@ for i = 1:dij.numOfBeams % loop over all beams
                         dij.physicalDose{1}(:,(ceil(readCounter/numOfBixelsContainer)-1)*numOfBixelsContainer+1:readCounter) = ...
                             [doseTmpContainer{1:mod(readCounter-1,numOfBixelsContainer)+1,1}];
                         
-                        % dij.physicalDoseError{1}(:,(ceil(readCounter/numOfBixelsContainer)-1)*numOfBixelsContainer+1:readCounter) = ...
-                        %     [doseTmpContainerError{1:mod(readCounter-1,numOfBixelsContainer)+1,1}];
+                        dij.physicalDoseError{1}(:,(ceil(readCounter/numOfBixelsContainer)-1)*numOfBixelsContainer+1:readCounter) = ...
+                            [doseTmpContainerError{1:mod(readCounter-1,numOfBixelsContainer)+1,1}];
                     end
                 end
             end
@@ -332,6 +333,8 @@ delete(fullfile(phantomPath, 'matRad_CT.ct'));             % phantom file
 for j = 1:maxNumOfParMCSim
     delete(fullfile(runsPath, ['MCpencilbeam_temp_',num2str(mod(j-1,VmcOptions.run.numOfParMCSim)+1),'.vmc'])); % vmc inputfile
     switch pln.propDoseCalc.vmcOptions.version
+        case 'vfcc'
+            filename = sprintf('%s%d.dos','MCpencilbeam_temp_',j);
         case 'Carleton'
             filename = sprintf('%s%d.dos','MCpencilbeam_temp_',j);
         case 'dkfz'

@@ -33,6 +33,8 @@ VmcOptions.run.version = pln.propDoseCalc.vmcOptions.version;
 % fieldsize@IC = 105mm x 105mm, phantomsize = 81 x 81 x 81 = 243mm x 243mm x 243mm
 % rel_Dose_cutoff = 10^(-3), ncase = 500000/bixel
 switch pln.propDoseCalc.vmcOptions.version
+    case 'vfcc'
+        VmcOptions.run.absCalibrationFactorVmc  = 1;
     case 'Carleton'
         switch pln.propDoseCalc.vmcOptions.source
             case 'phsp'
@@ -86,6 +88,8 @@ VmcOptions.quasi.skip      = 1;
 
 %% geometry
 switch pln.propDoseCalc.vmcOptions.version
+    case 'vfcc'
+        VmcOptions.geometry.XyzGeometry.methodOfInput = 'MMC-PHANTOM';
     case 'Carleton'
         VmcOptions.geometry.XyzGeometry.methodOfInput = 'MMC-PHANTOM';  % input method ('CT-PHANTOM', 'individual', 'groups')
     case 'dkfz'
