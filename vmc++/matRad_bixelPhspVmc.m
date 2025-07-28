@@ -6,7 +6,7 @@ function stf = matRad_bixelPhspVmc(stf,masterRayPosBEV,vmcOptions)
 
 
 switch vmcOptions.version
-    case 'vfcc'
+    case 'Vfcc'
         phspPath = fullfile(fileparts(mfilename('fullpath')), 'run', 'phsp');
     case 'Carleton'
         phspPath = fullfile(fileparts(mfilename('fullpath')), 'run', 'phsp');
@@ -65,6 +65,9 @@ if writeFiles
     % open header of full phsp
     [fid_full, header_full] = getHeader(fid_full);
     mode = char(header_full.MODE_RW(5));
+
+    XY = [X Y];
+    hw = bixelWidth/2;
     
     % loop through each record in full phsp
     fprintf('matRad: creating bixel phsp files... ');
@@ -74,7 +77,9 @@ if writeFiles
         [fid_full, record] = getRecord(fid_full,mode);
         
         % sort into correct bixel
-        bixelInd = find(sum(abs([X Y]-repelem([record.X record.Y],numBixels,1)) < repelem(bixelWidth/2,numBixels,2),2) == 2,1,'first');
+        %  bixelInd = find(sum(abs([X Y]-repelem([record.X record.Y],numBixels,1)) < repelem(bixelWidth/2,numBixels,2),2) == 2,1,'first');
+        d = abs(XY - [record.X record.Y]);
+        bixelInd = find(all(d < hw, 2), 1, 'first');
         
         if ~isempty(bixelInd)
             
@@ -89,7 +94,7 @@ if writeFiles
                 header_bixels{bixelInd}.EKMINPHSPE  = 1000;
                 
                 % open file, write header
-                fid_bixels{bixelInd} = fopen(fname_bixels{bixelInd},'W'); % turn this to 'W'?
+                fid_bixels{bixelInd} = fopen(fname_bixels{bixelInd},'w', 'ieee-le'); % turn this to 'W'?
                 writeHeader(fid_bixels{bixelInd},header_bixels{bixelInd});
             end
             
@@ -101,7 +106,8 @@ if writeFiles
             % modify max/min energies, increment number of photons
             % must determine particle type using LATCH
             %LATCH = de2bi(record.LATCH,32);
-            LATCH = dec2bin(record.LATCH,32);
+            % Modern core-MATLAB replacement (R2021b +):
+            LATCH = int2bit(uint32(record.LATCH),32,false).';   % 1×32, LSB?MSB
             if LATCH(30:31) == [0 0]
                 % photon
                 header_bixels{bixelInd}.EKMAXPHSP   = max(header_bixels{bixelInd}.EKMAXPHSP,abs(record.E));
@@ -167,6 +173,10 @@ if writeFiles
         if header_bixels{i}.EKMINPHSPE == 1000
             header_bixels{i}.EKMINPHSPE = 0;
         end
+
+        if header_bixels{i}.EKMINPHSPE < 0;
+	    header_bixels{i}.EKMINPHSPE = 0;
+	end
         
         % seek to beginning of file
         fseek(fid_bixels{i},0,'bof');
@@ -208,7 +218,7 @@ record.U        = fread(fid,1,'float32');
 record.V        = fread(fid,1,'float32');
 record.WT       = fread(fid,1,'float32');
 
-if mode == 2
+if mode == '2'
     record.ZLAST    = fread(fid,1,'float32');
 end
 
@@ -236,7 +246,7 @@ fwrite(fid,record.U,'float32');
 fwrite(fid,record.V,'float32');
 fwrite(fid,record.WT,'float32');
 
-if mode == 2
+if mode == '2'
     fwrite(fid,record.ZLAST,'float32');
 end
 
