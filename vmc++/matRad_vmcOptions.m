@@ -34,7 +34,8 @@ VmcOptions.run.version = pln.propDoseCalc.vmcOptions.version;
 % rel_Dose_cutoff = 10^(-3), ncase = 500000/bixel
 switch pln.propDoseCalc.vmcOptions.version
     case 'vfcc'
-        VmcOptions.run.absCalibrationFactorVmc  = 1;
+        VmcOptions.run.absCalibrationFactorVmc  = 3.4127e06;
+        VmcOptions.run.absCalibrationFactorVmc_err = 3.4127e06;
     case 'Carleton'
         switch pln.propDoseCalc.vmcOptions.source
             case 'phsp'

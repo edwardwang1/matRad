@@ -88,6 +88,8 @@ if exist(['vmc++' filesep 'bin'],'dir') ~= 7
 else
     VMCPath     = fullfile(pwd , 'vmc++');
     switch pln.propDoseCalc.vmcOptions.version
+        case 'vfcc'
+            runsPath    = fullfile(VMCPath, 'run');
         case 'Carleton'
             runsPath    = fullfile(VMCPath, 'run');
         case 'dkfz'
@@ -252,13 +254,15 @@ for i = 1:dij.numOfBeams % loop over all beams
                 %% import calculated dose
                 idx = regexp(outfile,'_');
                 switch pln.propDoseCalc.vmcOptions.version
+                    case 'vfcc'
+                        filename = sprintf('%s%d.dos',outfile(1:idx(2)),k);
                     case 'Carleton'
                         filename = sprintf('%s%d.dos',outfile(1:idx(2)),k);
                     case 'dkfz'
                         filename = sprintf('%s%d_%s.dos',outfile(1:idx(2)),k,VmcOptions.scoringOptions.outputOptions.name);
                 end
                 disp(fullfile(runsPath,filename))
-                [bixelDose,~] = matRad_readDoseVmc(fullfile(runsPath,filename),VmcOptions);
+                [bixelDose,bixelDoseError] = matRad_readDoseVmc(fullfile(runsPath,filename),VmcOptions);
                 
                 %{
                 %%% Don't do any sampling, since the correct error is
