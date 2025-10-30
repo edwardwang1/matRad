@@ -2,14 +2,14 @@
 datafile = readtable('SingleLesionAllEQD2.csv');
 patients = readlines('test.txt');
 doseParentDir = "E:\matRadData\SingleLesionLungDosesPreprocessed\";
-doseSaveDir = "E:\matRadData\SingleLesionPhysicalDosesOptimizedFromPreprocessed\";
+doseSaveDir = "E:\matRadData\SingleLesionPhysicalDosesOptimizedFromPreprocessed2mm\";
 
 %%
 for i = 1:numel(patients)
     close all
     patient = patients(i);
-    %runInversePlanning(patient, datafile, fullfile(doseParentDir, "GAN" + patient), fullfile(doseSaveDir, "GAN" + patient + ".mat"));
-    %runInversePlanning(patient, datafile, fullfile(doseParentDir, "Unet" + patient),  fullfile(doseSaveDir, "Unet" + patient + ".mat"));
+    runInversePlanning(patient, datafile, fullfile(doseParentDir, "GAN" + patient), fullfile(doseSaveDir, "GAN" + patient + ".mat"));
+    runInversePlanning(patient, datafile, fullfile(doseParentDir, "Unet" + patient),  fullfile(doseSaveDir, "Unet" + patient + ".mat"));
     runInversePlanning(patient, datafile, fullfile(doseParentDir, "HDUnet" + patient), fullfile(doseSaveDir, "HDUnet" + patient + ".mat"))
     %runInversePlanning(patient, datafile,  fullfile(doseParentDir, patient), fullfile(doseSaveDir, patient + ".mat"))
 end
@@ -18,13 +18,13 @@ end
 %function resultGUI3 = runInversePlanning(patient, datafile, pathToPredDose, result_save_path, dose_save_path)
 function runInversePlanning(patient, datafile, pathToPredDose, dose_save_path)
     patientParentDir = "E:\matRadData\SingleLesionLungPatients\";
-    dijDir = "E:\\matRadData\dijPBK3";
+    dijDir = "E:\\matRadData\dijPBK2mm";
     
     tic;
     matRad_rc
     load(fullfile(patientParentDir, patient));
     clear resultGUI %Don't need the original, save some memory
-    commonSetup = commonSetupSingleLesionLung(patient, datafile, cst, ct, pathToPredDose, "box", false);
+    commonSetup = commonSetupSingleLesionLung(patient, datafile, cst, ct, pathToPredDose, "hybrid", false);
     pln = commonSetup.pln;
     stf = commonSetup.stf;
     cst = commonSetup.cst;

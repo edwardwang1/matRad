@@ -42,9 +42,9 @@ function commonSetup = commonSetupSingleLesionLung(patient, datafile, cst, ct, p
     pln.propOpt.VMAToptions.finishingAngle = finishingAngle; 
     pln.propOpt.VMAToptions.continuousAperture = 0;
     
-    pln.propDoseCalc.doseGrid.resolution.x = 3; % [mm] 5
-    pln.propDoseCalc.doseGrid.resolution.y = 3; % [mm] 5
-    pln.propDoseCalc.doseGrid.resolution.z = 3  ; % [mm] 5
+    pln.propDoseCalc.doseGrid.resolution.x = 2; % was 3 for initial submission to med phys
+    pln.propDoseCalc.doseGrid.resolution.y = 2; % was 3 for initial submission to med phys
+    pln.propDoseCalc.doseGrid.resolution.z = 2  ; % was 3 for initial submission to med phys
     
     [cst, constraint_cst] = updateCST(cst, ct, ptv_name, igtv_name, dose, num_fractions, pathToDose, method, useConstraint);
     pln = matRad_VMATGantryAngles(pln, cst, ct);
